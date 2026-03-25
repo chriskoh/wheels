@@ -4,6 +4,7 @@ import math
 
 app = "ThrottleMeter"
 appWindow = 0
+thr_label = 0
 
 APP_WIDTH = 30
 APP_HEIGHT = 400
@@ -28,7 +29,7 @@ btn_decrease = 0
 
 
 def acMain(ac_version):
-    global appWindow, btn_increase, btn_decrease
+    global appWindow, btn_increase, btn_decrease, thr_label
 
     appWindow = ac.newApp(app)
     ac.setSize(appWindow, APP_WIDTH, APP_HEIGHT)
@@ -48,6 +49,11 @@ def acMain(ac_version):
     ac.setPosition(btn_increase, 20, 2)
     ac.setFontSize(btn_increase, 12)
     ac.addOnClickedListener(btn_increase, onIncrease)
+
+    thr_label = ac.addLabel(appWindow, "0")
+    ac.setPosition(thr_label, 2, APP_HEIGHT - 18)
+    ac.setFontSize(thr_label, 10)
+    ac.setFontColor(thr_label, 0.7, 0.7, 0.7, 1.0)
 
     ac.addRenderCallback(appWindow, onFormRender)
     ac.log("[" + app + "] Loaded")
@@ -111,6 +117,8 @@ def onFormRender(deltaT):
     speed_rate_smooth = speed_rate_smooth * 0.85 + raw_speed_rate * 0.15
 
     throttle_signal = angle_rate_smooth + speed_rate_smooth * 4.0
+
+    ac.setText(thr_label, "{:.0f}".format(throttle_signal))
 
     is_drifting = abs_angle > DRIFT_ANGLE_MIN
 
