@@ -29,11 +29,11 @@ except ImportError:
 
 
 def extract_frames(video_path, output_dir, fps=2):
-    """Extract frames from video using ffmpeg."""
+    """Extract frames from video using ffmpeg, resized to fit API limits."""
     pattern = os.path.join(output_dir, "frame_%04d.jpg")
     cmd = [
         "ffmpeg", "-i", video_path,
-        "-vf", "fps={}".format(fps),
+        "-vf", "fps={},scale='min(1920,iw)':min'(1080,ih)':force_original_aspect_ratio=decrease".format(fps),
         "-q:v", "2",
         pattern,
         "-y"
@@ -41,8 +41,18 @@ def extract_frames(video_path, output_dir, fps=2):
     print("Extracting frames at {} fps...".format(fps))
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        print("ffmpeg error:", result.stderr)
-        sys.exit(1)
+        # Try simpler scale filter if the first one fails
+        cmd = [
+            "ffmpeg", "-i", video_path,
+            "-vf", "fps={},scale=1280:-2".format(fps),
+            "-q:v", "3",
+            pattern,
+            "-y"
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            print("ffmpeg error:", result.stderr)
+            sys.exit(1)
 
     frames = sorted(glob.glob(os.path.join(output_dir, "frame_*.jpg")))
     print("Extracted {} frames".format(len(frames)))
