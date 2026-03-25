@@ -328,8 +328,7 @@ def onFormRender(deltaT):
     throttle_signal = angle_rate_smooth + speed_rate_smooth * 4.0
 
     # Show signal value on the throttle label for debugging
-    ac.setText(throttle_title_label, "THR: {:.0f}".format(throttle_signal))
-
+    ac.setText(throttle_title_label, "THROTTLE")
 
     # Draw the throttle meter bar (done in GL below)
     # Also update session stats

@@ -118,8 +118,6 @@ def onFormRender(deltaT):
 
     throttle_signal = angle_rate_smooth + speed_rate_smooth * 4.0
 
-    ac.setText(thr_label, "{:.0f}".format(throttle_signal))
-
     is_drifting = abs_angle > DRIFT_ANGLE_MIN
 
     draw_vertical_meter(is_drifting)

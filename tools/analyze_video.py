@@ -91,8 +91,9 @@ def analyze_frames(frames, max_frames=30):
             "- THROTTLE: horizontal bar meter with green target zone, needle moves "
             "left (drift dying, need more throttle) or right (angle growing, need less). "
             "There is a debug number 'THR: X' next to it showing the raw signal value. "
-            "This THR number is displayed in the black box in the upper-left corner "
-            "of the screen. Look for 'THR:' followed by a number in that box. "
+            "This THR number is displayed in its own standalone box in the upper-RIGHT "
+            "corner of the screen. It has a dark background and large white text showing "
+            "'THR:' followed by a number. "
             "Negative number = drift dying (needle should be left). Positive number = "
             "too much gas (needle should be right). ALWAYS report this THR number in your "
             "analysis, especially during problem moments. "
@@ -166,7 +167,7 @@ def analyze_frames(frames, max_frames=30):
 def main():
     parser = argparse.ArgumentParser(description="Analyze DriftCoach HUD from gameplay video")
     parser.add_argument("video", help="Path to video file")
-    parser.add_argument("--fps", type=float, default=8, help="Frames per second to extract (default: 8)")
+    parser.add_argument("--fps", type=float, default=4, help="Frames per second to extract (default: 4)")
     parser.add_argument("--max-frames", type=int, default=60, help="Max frames to send to Claude (default: 60)")
     parser.add_argument("--output", default=None, help="Output file for analysis (default: print to console)")
     args = parser.parse_args()
