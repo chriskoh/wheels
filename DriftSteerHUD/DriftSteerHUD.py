@@ -96,20 +96,25 @@ def onFormRender(deltaT):
 
     ac.setBackgroundOpacity(appWindow, 0.0)
 
-    try:
-        car = ac.getFocusedCar()
-        steer_angle = ac.getCarState(car, acsys.CS.Steer)
-        tire_angle_deg = math.degrees(steer_angle) / STEERING_RATIO
+    car = ac.getFocusedCar()
 
-        # Get tire temps as 4D vector: FL, FR, RL, RR
+    # Steer returns degrees despite docs saying radians
+    try:
+        steer_angle = ac.getCarState(car, acsys.CS.Steer)
+        tire_angle_deg = steer_angle / STEERING_RATIO
+    except Exception:
+        tire_angle_deg = 0.0
+
+    # Tire temperatures
+    fl_temp = fr_temp = rl_temp = rr_temp = 70.0
+    try:
         temps = ac.getCarState(car, acsys.CS.ThermalState)
         fl_temp = temps[0]
         fr_temp = temps[1]
         rl_temp = temps[2]
         rr_temp = temps[3]
     except Exception:
-        tire_angle_deg = 0.0
-        fl_temp = fr_temp = rl_temp = rr_temp = 70.0
+        pass
 
     ac.setText(angle_label, "{:.1f}".format(tire_angle_deg))
 
