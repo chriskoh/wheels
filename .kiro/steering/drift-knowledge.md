@@ -191,64 +191,121 @@ Drifting is controlled oversteer. The rear tires exceed their grip limit while t
 - Tandem drifting (following/leading another car)
 - Adapting to different cars and tracks
 
-## Assetto Corsa Python API — Available Drift Telemetry
+## Assetto Corsa Python API — VERIFIED Available Telemetry
 
-All accessed via `ac.getCarState(car, acsys.CS.<identifier>)`:
+Tested in-game 2026-03-24. 92 working, 1 error, 12 missing.
+All via `ac.getCarState(car, acsys.CS.<id>)` unless noted.
 
-### Scalar Values
-- `Steer` — steering wheel angle (degrees, despite docs saying radians)
-- `Gas` — throttle position 0.0 to 1.0
-- `Brake` — brake position 0.0 to 1.0
-- `Clutch` — clutch position 0.0 to 1.0
-- `SpeedKMH` / `SpeedMPH` / `SpeedMS` — current speed
-- `Gear` — current gear
-- `RPM` — engine RPM
-- `DriftPoints` — current lap drift points
-- `DriftBestLap` — best lap drift points
-- `InstantDrift` — current instant drift score
-- `IsDriftInvalid` — whether current drift is invalidated
-- `CGHeight` — center of gravity height
+### Scalar Values (all CONFIRMED working)
+- `Steer` — steering wheel angle in DEGREES (docs say radians, they're wrong). Sample: 130.6
+- `Gas` — throttle 0.0-1.0
+- `Brake` — brake 0.0-1.0
+- `Clutch` — clutch 0.0-1.0 (1.0 = fully depressed)
+- `Gear` — current gear (int)
+- `RPM` — engine RPM (float)
+- `SpeedKMH` / `SpeedMPH` / `SpeedMS` — speed in various units
+- `BestLap` — best lap ms (int)
+- `LapTime` — current lap ms (int)
+- `LastLap` — last lap ms (int)
+- `LapCount` — laps completed (int)
+- `LapInvalidated` — 0 or 1
+- `CGHeight` — center of gravity height (float, sample: 0.44)
+- `DriveTrainSpeed` — speed at wheels (float)
+- `DriftPoints` — current lap drift score
+- `DriftBestLap` — best drift lap score
+- `DriftLastLap` — last drift lap score
+- `InstantDrift` — real-time drift score
+- `IsDriftInvalid` — 0 or 1
+- `IsEngineLimiterOn` — 0 or 1
+- `LastFF` — last force feedback value
+- `NormalizedSplinePosition` — track position 0.0-1.0
+- `PerformanceMeter` — delta to best lap
+- `TurboBoost` — turbo pressure
+- `Caster` — caster angle (float, sample: -8.5)
 
-### 3D Vectors (x, y, z)
-- `AccG` — G-forces on the car
-- `LocalAngularVelocity` — yaw/pitch/roll rates (car-relative). Y component = yaw rate = how fast car is rotating
-- `LocalVelocity` — velocity in car coordinates. X = lateral (sideways) speed, Z = longitudinal (forward) speed
-- `Velocity` — world-space velocity vector
-- `WorldPosition` — car position on track
-- `WheelAngularSpeed` — wheel rotation speeds
+### DOES NOT EXIST
+- `SteerAngle` — ERROR: "type object 'CS' has no attribute 'SteerAngle'"
 
-### 4D Vectors (FL, FR, RL, RR)
-- `SlipAngle` — slip angle per tire in degrees
-- `SlipRatio` — ratio of tire spin vs ground speed per wheel
-- `CurrentTyresCoreTemp` — core temperature per tire
-- `DynamicPressure` — tire pressure per wheel
-- `Load` — vertical load per tire
-- `SuspensionTravel` — suspension compression per wheel
-- `CamberRad` — camber angle per wheel in radians
-- `TyreDirtyLevel` — dirt on tires (0-10)
-- `Mz` — self-aligning torque per tire
-- `NdSlip` / `TyreSlip` / `DY` — various tire slip metrics
+### 3D Vectors (CONFIRMED working, return 3-element tuple)
+- `AccG` — G-forces (x, y, z)
+- `LocalAngularVelocity` — rotation rates in car space. CRITICAL: y = yaw rate
+- `LocalVelocity` — velocity in car space. x = lateral, y = vertical, z = forward (NOTE: probe showed y=-0.335 when stationary, z=0.009 — y appears to be vertical/gravity, needs testing while moving)
+- `Velocity` — world-space velocity
+- `SpeedTotal` — (kmh, mph, ms) all at once
+- `WorldPosition` — car world coordinates
 
-### Per-Wheel 3D Vectors (need FL/FR/RL/RR as optional param)
-- `TyreContactPoint` — where tire touches ground
-- `TyreContactNormal` — surface normal at contact
-- `TyreHeadingVector` — direction tire is pointing
-- `TyreRightVector` — tire's lateral direction
+### 4D Vectors (CONFIRMED working, return 4-element tuple: FL, FR, RL, RR)
+- `WheelAngularSpeed` — returns 4 values despite being listed as 3D in docs
+- `SlipAngle` — per-tire slip angle in degrees. Sample: FL=-8.5, FR=13.4, RL=-5.3, RR=6.0
+- `SlipRatio` — tire spin vs ground speed. Sample: 0.019, -0.011, 0.001, 0.003
+- `Load` — vertical load per tire in Newtons. Sample: FL=2624, FR=2838, RL=4200, RR=4086
+- `CamberRad` — camber per wheel in radians. Sample: -0.106, -0.041, -0.016, -0.016
+- `CurrentTyresCoreTemp` — core temp per tire in Celsius. Sample: 26.0 (cold start)
+- `LastTyresTemp` — returns 3 values (not 4!), shows -200 when no data. Unreliable.
+- `DynamicPressure` — tire pressure PSI. Sample: 30.0 all around
+- `SuspensionTravel` — suspension compression in meters. Sample: 0.019-0.045
+- `TyreDirtyLevel` — dirt level 0-10. Sample: 0.0
+- `Mz` — self-aligning torque. Sample: 0.047, 0.436, 1.752, -2.102
+- `NdSlip` — normalized slip. Sample: 0.963, 1.474, 0.552, 0.622
+- `TyreSlip` — returns 0.0 at standstill, needs testing while moving
+- `DY` — lateral friction coefficient. Sample: 1.261, 1.314, 1.247, 1.250
+- `TyreRadius` — unloaded radius in meters. Sample: 0.303
+- `TyreLoadedRadius` — loaded radius. Sample: 0.293, 0.292, 0.287, 0.287
+
+### Per-Wheel 3D Vectors (with acsys.WHEELS.FL/FR/RL/RR)
+- `TyreContactPoint` — WORKS. World position where tire meets ground.
+- `TyreContactNormal` — WORKS. Surface normal at contact (0,1,0 = flat ground).
+- `TyreHeadingVector` — returns -1 (BROKEN, does not work)
+- `TyreRightVector` — returns -1 (BROKEN, does not work)
+
+### Extra/Undocumented (CONFIRMED working)
+- `Aero` — returns float (needs index: 0=drag, 1=lift front, 2=lift rear). Returns 0.0 at standstill.
+- `RideHeight` — returns 2-element vector (front, rear) in meters. Sample: 0.103, 0.092
+- `ERSRecovery` / `ERSDelivery` / `ERSHeatCharging` — ERS settings (int, 0 for non-hybrid)
+- `ERSCurrentKJ` / `ERSMaxJ` — ERS energy (float, 0 for non-hybrid)
+- `P2PStatus` / `P2PActivations` — push-to-pass (int, 0 for most cars)
+
+### CONFIRMED MISSING (not on acsys.CS)
+- `ThermalState` — DOES NOT EXIST (use CurrentTyresCoreTemp instead)
+- `TyreWear` — not available
+- `BrakeTemperature` — not available
+- `EngineTorque` / `EngineMaxTorque` — not available
+- `MaxRPM` / `MaxSpeed` — not available
+- `Turbo` — not available (use TurboBoost instead)
+- `DRSAvailable` / `DRSEnabled` — not available
+- `KERSCharge` / `KERSInput` — not available
+- `SteerAngle` — not available (use Steer instead)
+
+### Utility Functions (CONFIRMED working)
+- `ac.getDriverName(car)` — driver name string
+- `ac.getCarName(car)` — car model ID string
+- `ac.getTrackName(car)` — track name string
+- `ac.getTrackConfiguration(car)` — track config string
+- `ac.getFocusedCar()` — focused car index (int)
+- `ac.getCarBallast(car)` — ballast kg (int)
+- `ac.getCarMinHeight(car)` — min ride height (float, -1.0 if not set)
+- `ac.isAcLive()` — is AC running (int 0/1)
+- `ac.isCarInPitlane(car)` — in pit lane (int 0/1)
+- `ac.getCarSkin(car)` — skin name string
+- `ac.getDriverNationCode(car)` — nation code string
+- `ac.getTrackLength(car)` — track length in meters (float)
+- `ac.getWindSpeed()` — wind speed (int)
+- `ac.getWindDirection()` — wind direction degrees (int)
+- `ac.isAIControlled(car)` — is AI (int 0/1)
 
 ### Calculating Body Slip Angle
 Body slip angle can be derived from LocalVelocity:
 ```python
 local_vel = ac.getCarState(car, acsys.CS.LocalVelocity)
-# local_vel[0] = lateral velocity, local_vel[2] = forward velocity
-body_slip_angle = math.degrees(math.atan2(local_vel[0], local_vel[2]))
+# NOTE: from probe data, LocalVelocity appears to be (lateral, vertical, forward)
+# Need to verify x vs z while car is moving
+body_slip_angle = math.degrees(math.atan2(local_vel[0], abs(local_vel[2])))
 ```
-This gives the angle between where the car is pointed and where it's actually going — the core drift angle metric.
 
 ### Detecting Counter-Steer
-Counter-steer occurs when the steering direction opposes the drift direction:
 ```python
 steer = ac.getCarState(car, acsys.CS.Steer)
-# If body_slip_angle is positive (sliding right) and steer is positive (wheels right), that's counter-steer
+# If body_slip_angle and steer have same sign = counter-steering
 is_counter_steering = (body_slip_angle > 0 and steer > 0) or (body_slip_angle < 0 and steer < 0)
 ```
 
