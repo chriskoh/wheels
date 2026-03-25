@@ -15,9 +15,13 @@ TIRE_HEIGHT = 60
 STEERING_RATIO = 14.0
 
 # Temperature color thresholds (Celsius)
-TEMP_COLD = 60.0     # Below this = blue (too cold)
-TEMP_OPTIMAL = 85.0  # Around this = green (ideal)
-TEMP_HOT = 110.0     # Above this = red (overheating)
+# Based on real-world tire data: peak grip ~75-90C for most compounds
+# Drifting runs rears hotter due to constant sliding
+TEMP_COLD = 50.0          # Deep blue - no grip, way too cold
+TEMP_COOL = 70.0          # Light blue - warming up
+TEMP_OPTIMAL_LOW = 75.0   # Green zone starts - good grip
+TEMP_OPTIMAL_HIGH = 100.0 # Green zone ends - still strong
+TEMP_HOT = 120.0          # Deep red - destroying the tires
 
 scale = 1.0
 SCALE_STEP = 0.1
@@ -74,20 +78,27 @@ def onDecrease(*args):
 
 
 def temp_to_color(temp):
-    """Return (r, g, b) based on tire temperature."""
+    """Return (r, g, b) based on tire temperature across 5 zones."""
     if temp < TEMP_COLD:
-        # Blue (too cold)
-        return (0.2, 0.4, 1.0)
-    elif temp < TEMP_OPTIMAL:
-        # Blend from blue to green
-        t = (temp - TEMP_COLD) / (TEMP_OPTIMAL - TEMP_COLD)
-        return (0.2 * (1.0 - t), 0.4 + 0.6 * t, 1.0 * (1.0 - t) + 0.2 * t)
+        # Deep blue - way too cold
+        return (0.1, 0.2, 1.0)
+    elif temp < TEMP_COOL:
+        # Blend blue to cyan (warming up)
+        t = (temp - TEMP_COLD) / (TEMP_COOL - TEMP_COLD)
+        return (0.1, 0.2 + 0.6 * t, 1.0 - 0.2 * t)
+    elif temp < TEMP_OPTIMAL_LOW:
+        # Blend cyan to green (almost there)
+        t = (temp - TEMP_COOL) / (TEMP_OPTIMAL_LOW - TEMP_COOL)
+        return (0.0, 0.8 + 0.2 * t, 0.8 * (1.0 - t))
+    elif temp < TEMP_OPTIMAL_HIGH:
+        # Green - optimal grip
+        return (0.0, 1.0, 0.0)
     elif temp < TEMP_HOT:
-        # Blend from green to red
-        t = (temp - TEMP_OPTIMAL) / (TEMP_HOT - TEMP_OPTIMAL)
-        return (t, 1.0 * (1.0 - t), 0.2 * (1.0 - t))
+        # Blend green to red (overheating)
+        t = (temp - TEMP_OPTIMAL_HIGH) / (TEMP_HOT - TEMP_OPTIMAL_HIGH)
+        return (t, 1.0 * (1.0 - t), 0.0)
     else:
-        # Red (overheating)
+        # Deep red - destroying tires
         return (1.0, 0.0, 0.0)
 
 
