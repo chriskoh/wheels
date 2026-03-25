@@ -349,11 +349,10 @@ def draw_throttle_meter(active):
     ac.glVertex2f(bar_x, bar_y + bar_h)
     ac.glEnd()
 
-    # Green target zone — shifted slightly right since positive rate is normal during drift
+    # Green target zone in center
     zone_w = bar_w * 0.35
-    zone_offset = bar_w * 0.05
-    zone_left = center_x - zone_w / 2 + zone_offset
-    zone_right = center_x + zone_w / 2 + zone_offset
+    zone_left = center_x - zone_w / 2
+    zone_right = center_x + zone_w / 2
     ac.glBegin(3)
     ac.glColor4f(0.1, 0.4, 0.1, 0.6)
     ac.glVertex2f(zone_left, bar_y)
@@ -378,9 +377,7 @@ def draw_throttle_meter(active):
         return
 
     # Map angle_rate_smooth to position
-    # Offset by +10 so small positive rates (normal during drift) center in green
-    adjusted = angle_rate_smooth - 10.0
-    clamped = max(-80.0, min(80.0, adjusted))
+    clamped = max(-80.0, min(80.0, angle_rate_smooth))
     normalized = clamped / 80.0
 
     # Needle position — very chunky
