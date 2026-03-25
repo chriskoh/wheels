@@ -13,6 +13,8 @@ countersteer_label = 0
 yaw_label = 0
 stats_label = 0
 throttle_title_label = 0
+throttle_more_label = 0
+throttle_less_label = 0
 btn_increase = 0
 btn_decrease = 0
 
@@ -57,6 +59,7 @@ def acMain(ac_version):
     global appWindow
     global slip_angle_label, slip_value_label, state_label
     global countersteer_label, yaw_label, stats_label, throttle_title_label
+    global throttle_more_label, throttle_less_label
     global btn_increase, btn_decrease
 
     appWindow = ac.newApp(app)
@@ -113,6 +116,17 @@ def acMain(ac_version):
     ac.setPosition(stats_label, 12, 300)
     ac.setFontSize(stats_label, 14)
     ac.setFontColor(stats_label, 0.7, 0.7, 0.7, 1.0)
+
+    # Throttle bar direction labels
+    throttle_more_label = ac.addLabel(appWindow, "MORE")
+    ac.setPosition(throttle_more_label, 12, 282)
+    ac.setFontSize(throttle_more_label, 11)
+    ac.setFontColor(throttle_more_label, 0.5, 0.5, 0.5, 1.0)
+
+    throttle_less_label = ac.addLabel(appWindow, "LESS")
+    ac.setPosition(throttle_less_label, BASE_WIDTH - 45, 282)
+    ac.setFontSize(throttle_less_label, 11)
+    ac.setFontColor(throttle_less_label, 0.5, 0.5, 0.5, 1.0)
 
     ac.addRenderCallback(appWindow, onFormRender)
     ac.log("[" + app + "] Loaded")
