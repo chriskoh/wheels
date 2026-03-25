@@ -40,7 +40,10 @@ stats_drift_count = 0
 was_drifting = False
 was_spinning = False
 prev_slip_angle = 0.0
+prev_speed = 0.0
 angle_rate_smooth = 0.0
+speed_rate_smooth = 0.0
+throttle_signal = 0.0
 
 # Drift states
 GRIP = 0
@@ -218,7 +221,8 @@ def onFormRender(deltaT):
     global stats_max_angle, stats_longest_drift, stats_current_drift_time
     global stats_spin_count, stats_drift_count
     global was_drifting, was_spinning
-    global prev_slip_angle, angle_rate_smooth
+    global prev_slip_angle, prev_speed
+    global angle_rate_smooth, speed_rate_smooth, throttle_signal
 
     ac.setBackgroundOpacity(appWindow, 0.7)
 
@@ -284,16 +288,26 @@ def onFormRender(deltaT):
         ac.setFontColor(yaw_label, 0.7, 0.7, 0.7, 1.0)
     ac.setText(yaw_label, "YAW: {:.1f}/s".format(yaw_rate))
 
-    # === THROTTLE METER (angle rate of change) ===
-    if deltaT > 0:
-        raw_rate = (abs_angle - abs(prev_slip_angle)) / deltaT
-    else:
-        raw_rate = 0.0
-    prev_slip_angle = slip_angle
+    # === THROTTLE SIGNAL (angle rate + speed rate) ===
+    speed = 0.0
+    try:
+        speed = ac.getCarState(car, acsys.CS.SpeedKMH)
+    except Exception:
+        pass
 
-    # Smooth the rate so it doesn't jitter (exponential moving average)
-    # Heavier smoothing to reduce twitchiness
-    angle_rate_smooth = angle_rate_smooth * 0.92 + raw_rate * 0.08
+    if deltaT > 0:
+        raw_angle_rate = (abs_angle - abs(prev_slip_angle)) / deltaT
+        raw_speed_rate = (speed - prev_speed) / deltaT
+    else:
+        raw_angle_rate = 0.0
+        raw_speed_rate = 0.0
+    prev_slip_angle = slip_angle
+    prev_speed = speed
+
+    angle_rate_smooth = angle_rate_smooth * 0.92 + raw_angle_rate * 0.08
+    speed_rate_smooth = speed_rate_smooth * 0.92 + raw_speed_rate * 0.08
+
+    throttle_signal = angle_rate_smooth + speed_rate_smooth * 2.0
 
     # Draw the throttle meter bar (done in GL below)
     # Also update session stats
@@ -377,7 +391,7 @@ def draw_throttle_meter(active):
         return
 
     # Map angle_rate_smooth to position
-    clamped = max(-80.0, min(80.0, angle_rate_smooth))
+    clamped = max(-80.0, min(80.0, throttle_signal))
     normalized = clamped / 80.0
 
     # Needle position — very chunky
