@@ -415,9 +415,9 @@ def draw_throttle_meter(active):
     if not active:
         return
 
-    # Map angle_rate_smooth to position (wide range = subtle, precise needle)
-    clamped = max(-800.0, min(800.0, throttle_signal))
-    normalized = clamped / 800.0
+    # Map angle_rate_smooth to position (tight range = sensitive needle)
+    clamped = max(-50.0, min(50.0, throttle_signal))
+    normalized = clamped / 50.0
 
     # Needle position — very chunky
     needle_x = center_x + normalized * (bar_w / 2.0)
