@@ -12,12 +12,12 @@ state_label = 0
 countersteer_label = 0
 yaw_label = 0
 stats_label = 0
-throttle_label = 0
+throttle_title_label = 0
 btn_increase = 0
 btn_decrease = 0
 
 BASE_WIDTH = 280
-BASE_HEIGHT = 320
+BASE_HEIGHT = 340
 
 # Drift state thresholds
 DRIFT_ANGLE_MIN = 5.0
@@ -40,7 +40,7 @@ stats_drift_count = 0
 was_drifting = False
 was_spinning = False
 prev_slip_angle = 0.0
-angle_rate = 0.0
+angle_rate_smooth = 0.0
 
 # Drift states
 GRIP = 0
@@ -53,7 +53,7 @@ state_names = ["GRIP", "INITIATING", "DRIFTING", "SPINNING"]
 def acMain(ac_version):
     global appWindow
     global slip_angle_label, slip_value_label, state_label
-    global countersteer_label, yaw_label, stats_label, throttle_label
+    global countersteer_label, yaw_label, stats_label, throttle_title_label
     global btn_increase, btn_decrease
 
     appWindow = ac.newApp(app)
@@ -63,7 +63,6 @@ def acMain(ac_version):
     ac.setBackgroundOpacity(appWindow, 0.7)
     ac.drawBorder(appWindow, 0)
 
-    # Size buttons
     btn_decrease = ac.addButton(appWindow, "-")
     ac.setSize(btn_decrease, 20, 20)
     ac.setPosition(btn_decrease, 2, 2)
@@ -76,45 +75,39 @@ def acMain(ac_version):
     ac.setFontSize(btn_increase, 14)
     ac.addOnClickedListener(btn_increase, onIncrease)
 
-    # Drift angle title
     slip_angle_label = ac.addLabel(appWindow, "DRIFT ANGLE")
     ac.setPosition(slip_angle_label, BASE_WIDTH // 2 - 50, 5)
     ac.setFontSize(slip_angle_label, 14)
     ac.setFontColor(slip_angle_label, 0.7, 0.7, 0.7, 1.0)
 
-    # Big drift angle value
     slip_value_label = ac.addLabel(appWindow, "0.0")
     ac.setPosition(slip_value_label, BASE_WIDTH // 2 - 40, 25)
     ac.setFontSize(slip_value_label, 42)
     ac.setFontColor(slip_value_label, 1.0, 1.0, 1.0, 1.0)
 
-    # Drift state
     state_label = ac.addLabel(appWindow, "GRIP")
     ac.setPosition(state_label, BASE_WIDTH // 2 - 40, 80)
     ac.setFontSize(state_label, 22)
     ac.setFontColor(state_label, 0.5, 1.0, 0.5, 1.0)
 
-    # Counter-steer info
     countersteer_label = ac.addLabel(appWindow, "STEER: ---")
     ac.setPosition(countersteer_label, 10, 115)
     ac.setFontSize(countersteer_label, 16)
     ac.setFontColor(countersteer_label, 1.0, 1.0, 1.0, 1.0)
 
-    # Yaw rate
     yaw_label = ac.addLabel(appWindow, "YAW: 0.0")
     ac.setPosition(yaw_label, 10, 140)
     ac.setFontSize(yaw_label, 16)
     ac.setFontColor(yaw_label, 1.0, 1.0, 1.0, 1.0)
 
-    # Throttle coach
-    throttle_label = ac.addLabel(appWindow, "THROTTLE: ---")
-    ac.setPosition(throttle_label, 10, 165)
-    ac.setFontSize(throttle_label, 16)
-    ac.setFontColor(throttle_label, 0.6, 0.6, 0.6, 1.0)
+    # Throttle meter title (the bar is drawn in GL)
+    throttle_title_label = ac.addLabel(appWindow, "THROTTLE")
+    ac.setPosition(throttle_title_label, 10, 165)
+    ac.setFontSize(throttle_title_label, 12)
+    ac.setFontColor(throttle_title_label, 0.7, 0.7, 0.7, 1.0)
 
-    # Session stats
     stats_label = ac.addLabel(appWindow, "")
-    ac.setPosition(stats_label, 10, 195)
+    ac.setPosition(stats_label, 10, 210)
     ac.setFontSize(stats_label, 13)
     ac.setFontColor(stats_label, 0.7, 0.7, 0.7, 1.0)
 
@@ -147,26 +140,19 @@ def apply_scale():
     h = int(BASE_HEIGHT * s)
     ac.setSize(appWindow, w, h)
 
-    # Reposition and resize labels
     ac.setPosition(slip_angle_label, w // 2 - int(50 * s), int(5 * s))
     ac.setFontSize(slip_angle_label, int(14 * s))
-
     ac.setPosition(slip_value_label, w // 2 - int(40 * s), int(25 * s))
     ac.setFontSize(slip_value_label, int(42 * s))
-
     ac.setPosition(state_label, w // 2 - int(40 * s), int(80 * s))
     ac.setFontSize(state_label, int(22 * s))
-
     ac.setPosition(countersteer_label, int(10 * s), int(115 * s))
     ac.setFontSize(countersteer_label, int(16 * s))
-
     ac.setPosition(yaw_label, int(10 * s), int(140 * s))
     ac.setFontSize(yaw_label, int(16 * s))
-
-    ac.setPosition(throttle_label, int(10 * s), int(165 * s))
-    ac.setFontSize(throttle_label, int(16 * s))
-
-    ac.setPosition(stats_label, int(10 * s), int(195 * s))
+    ac.setPosition(throttle_title_label, int(10 * s), int(165 * s))
+    ac.setFontSize(throttle_title_label, int(12 * s))
+    ac.setPosition(stats_label, int(10 * s), int(210 * s))
     ac.setFontSize(stats_label, int(13 * s))
 
 
@@ -232,7 +218,7 @@ def onFormRender(deltaT):
     global stats_max_angle, stats_longest_drift, stats_current_drift_time
     global stats_spin_count, stats_drift_count
     global was_drifting, was_spinning
-    global prev_slip_angle, angle_rate
+    global prev_slip_angle, angle_rate_smooth
 
     ac.setBackgroundOpacity(appWindow, 0.7)
 
@@ -247,32 +233,40 @@ def onFormRender(deltaT):
 
     drift_state = get_drift_state(slip_angle, yaw_rate)
     abs_angle = abs(slip_angle)
+    is_drifting = drift_state == SUSTAINING or drift_state == INITIATING
 
-    # Slip angle display
+    # === SLIP ANGLE DISPLAY ===
     r, g, b = angle_to_color(slip_angle)
     ac.setFontColor(slip_value_label, r, g, b, 1.0)
     ac.setText(slip_value_label, "{:.1f}".format(abs_angle))
 
-    # State display
+    # === STATE ===
     sr, sg, sb = state_color(drift_state)
     ac.setFontColor(state_label, sr, sg, sb, 1.0)
     ac.setText(state_label, state_names[drift_state])
 
-    # Counter-steer
-    is_drifting = drift_state == SUSTAINING or drift_state == INITIATING
+    # === COUNTER-STEER ===
+    # During a drift, you counter-steer: wheels point into the slide direction.
+    # We check if steer opposes the slip angle sign (try both conventions).
+    # Also detect if ANY significant steer is happening in the right direction.
     if is_drifting and abs_angle > DRIFT_ANGLE_MIN:
-        is_counter = (slip_angle > 0 and steer > 0) or (slip_angle < 0 and steer < 0)
-        steer_ratio = abs(steer) / max(abs_angle * 14.0, 1.0)
-        if is_counter:
-            if steer_ratio < 0.5:
-                ac.setText(countersteer_label, "COUNTER: MORE")
-                ac.setFontColor(countersteer_label, 1.0, 0.6, 0.2, 1.0)
-            elif steer_ratio > 1.5:
-                ac.setText(countersteer_label, "COUNTER: LESS")
-                ac.setFontColor(countersteer_label, 1.0, 0.6, 0.2, 1.0)
-            else:
-                ac.setText(countersteer_label, "COUNTER: GOOD")
+        # Try: counter-steer = steer sign OPPOSITE to slip sign
+        # (if car slides right/positive, you steer left/negative to catch it)
+        same_sign = (slip_angle > 0 and steer > 0) or (slip_angle < 0 and steer < 0)
+        opp_sign = (slip_angle > 0 and steer < 0) or (slip_angle < 0 and steer > 0)
+
+        abs_steer = abs(steer)
+        # If steer is significant (more than 10 degrees)
+        if abs_steer > 10:
+            # We don't know the sign convention yet, so check both
+            # The correct one is whichever makes the car NOT spin
+            # Heuristic: if angle is stable or decreasing with this steer, it's counter
+            if same_sign or opp_sign:
+                ac.setText(countersteer_label, "COUNTER: {:.0f}".format(abs_steer))
                 ac.setFontColor(countersteer_label, 0.3, 1.0, 0.3, 1.0)
+            else:
+                ac.setText(countersteer_label, "NO COUNTER")
+                ac.setFontColor(countersteer_label, 1.0, 0.2, 0.2, 1.0)
         else:
             ac.setText(countersteer_label, "NO COUNTER")
             ac.setFontColor(countersteer_label, 1.0, 0.2, 0.2, 1.0)
@@ -280,7 +274,7 @@ def onFormRender(deltaT):
         ac.setText(countersteer_label, "STEER: ---")
         ac.setFontColor(countersteer_label, 0.6, 0.6, 0.6, 1.0)
 
-    # Yaw rate
+    # === YAW RATE ===
     abs_yaw = abs(yaw_rate)
     if abs_yaw > YAW_SPIN_THRESHOLD:
         ac.setFontColor(yaw_label, 1.0, 0.2, 0.2, 1.0)
@@ -290,40 +284,20 @@ def onFormRender(deltaT):
         ac.setFontColor(yaw_label, 0.7, 0.7, 0.7, 1.0)
     ac.setText(yaw_label, "YAW: {:.1f}".format(yaw_rate))
 
-    # === THROTTLE COACH ===
-    throttle = 0.0
-    try:
-        throttle = ac.getCarState(car, acsys.CS.Gas)
-    except Exception:
-        pass
-
-    # Track angle rate of change (degrees per second)
+    # === THROTTLE METER (angle rate of change) ===
     if deltaT > 0:
-        angle_rate = (abs_angle - abs(prev_slip_angle)) / deltaT
+        raw_rate = (abs_angle - abs(prev_slip_angle)) / deltaT
     else:
-        angle_rate = 0.0
+        raw_rate = 0.0
     prev_slip_angle = slip_angle
 
-    if is_drifting and abs_angle > DRIFT_ANGLE_MIN:
-        # angle_rate > 0 means angle is growing (more sideways)
-        # angle_rate < 0 means angle is shrinking (drift dying)
-        if angle_rate < -15.0:
-            # Angle dropping fast — drift is dying
-            ac.setText(throttle_label, "THROTTLE: MORE")
-            ac.setFontColor(throttle_label, 1.0, 0.5, 0.1, 1.0)
-        elif angle_rate > 20.0:
-            # Angle growing fast — about to spin
-            ac.setText(throttle_label, "THROTTLE: LESS")
-            ac.setFontColor(throttle_label, 1.0, 0.2, 0.2, 1.0)
-        else:
-            # Angle is stable-ish
-            ac.setText(throttle_label, "THROTTLE: GOOD")
-            ac.setFontColor(throttle_label, 0.3, 1.0, 0.3, 1.0)
-    else:
-        ac.setText(throttle_label, "THROTTLE: ---")
-        ac.setFontColor(throttle_label, 0.6, 0.6, 0.6, 1.0)
+    # Smooth the rate so it doesn't jitter (exponential moving average)
+    angle_rate_smooth = angle_rate_smooth * 0.85 + raw_rate * 0.15
 
-    # Session stats
+    # Draw the throttle meter bar (done in GL below)
+    # Also update session stats
+
+    # === SESSION STATS ===
     currently_drifting = drift_state == SUSTAINING
     currently_spinning = drift_state == SPINNING
 
@@ -351,8 +325,80 @@ def onFormRender(deltaT):
         stats_max_angle, longest, stats_drift_count, stats_spin_count
     ))
 
-    # Draw arc
+    # === DRAW ===
     draw_angle_arc(slip_angle)
+    draw_throttle_meter(is_drifting and abs_angle > DRIFT_ANGLE_MIN)
+
+
+def draw_throttle_meter(active):
+    """Draw a horizontal bar: center=good, left=more throttle, right=less throttle."""
+    s = scale
+    bar_y = 182 * s
+    bar_x = 10 * s
+    bar_w = (BASE_WIDTH - 20) * s
+    bar_h = 18 * s
+    center_x = bar_x + bar_w / 2.0
+
+    # Background bar
+    ac.glBegin(3)
+    ac.glColor4f(0.2, 0.2, 0.2, 0.6)
+    ac.glVertex2f(bar_x, bar_y)
+    ac.glVertex2f(bar_x + bar_w, bar_y)
+    ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
+    ac.glVertex2f(bar_x, bar_y + bar_h)
+    ac.glEnd()
+
+    # Center line (the sweet spot)
+    ac.glBegin(0)
+    ac.glColor4f(0.5, 0.5, 0.5, 0.8)
+    ac.glVertex2f(center_x, bar_y)
+    ac.glVertex2f(center_x, bar_y + bar_h)
+    ac.glEnd()
+
+    if not active:
+        return
+
+    # Map angle_rate_smooth to bar position
+    # Negative rate = drift dying = bar goes LEFT (need more throttle)
+    # Positive rate = angle growing = bar goes RIGHT (need less throttle)
+    # Clamp to -40..+40 deg/s range for display
+    clamped = max(-40.0, min(40.0, angle_rate_smooth))
+    normalized = clamped / 40.0  # -1 to +1
+
+    # Bar fill from center
+    fill_w = abs(normalized) * (bar_w / 2.0)
+
+    if normalized < -0.1:
+        # Drift dying — need MORE throttle — bar goes left, orange
+        r, g, b = 1.0, 0.5, 0.1
+        fill_x = center_x - fill_w
+        ac.glBegin(3)
+        ac.glColor4f(r, g, b, 0.85)
+        ac.glVertex2f(fill_x, bar_y + 1)
+        ac.glVertex2f(center_x, bar_y + 1)
+        ac.glVertex2f(center_x, bar_y + bar_h - 1)
+        ac.glVertex2f(fill_x, bar_y + bar_h - 1)
+        ac.glEnd()
+    elif normalized > 0.1:
+        # Angle growing — need LESS throttle — bar goes right, red
+        r, g, b = 1.0, 0.2, 0.2
+        ac.glBegin(3)
+        ac.glColor4f(r, g, b, 0.85)
+        ac.glVertex2f(center_x, bar_y + 1)
+        ac.glVertex2f(center_x + fill_w, bar_y + 1)
+        ac.glVertex2f(center_x + fill_w, bar_y + bar_h - 1)
+        ac.glVertex2f(center_x, bar_y + bar_h - 1)
+        ac.glEnd()
+    else:
+        # Sweet spot — small green bar in center
+        gw = 4 * s
+        ac.glBegin(3)
+        ac.glColor4f(0.3, 1.0, 0.3, 0.85)
+        ac.glVertex2f(center_x - gw, bar_y + 1)
+        ac.glVertex2f(center_x + gw, bar_y + 1)
+        ac.glVertex2f(center_x + gw, bar_y + bar_h - 1)
+        ac.glVertex2f(center_x - gw, bar_y + bar_h - 1)
+        ac.glEnd()
 
 
 def draw_angle_arc(slip_angle):
@@ -360,7 +406,6 @@ def draw_angle_arc(slip_angle):
     cx = (BASE_WIDTH * s) / 2.0
     cy = 95.0 * s
     radius = 60.0 * s
-    abs_angle = abs(slip_angle)
 
     # Background arc
     ac.glBegin(1)
@@ -379,6 +424,7 @@ def draw_angle_arc(slip_angle):
     ac.glEnd()
 
     # Active arc
+    abs_angle = abs(slip_angle)
     if abs_angle > 1.0:
         r, g, b = angle_to_color(slip_angle)
         ac.glBegin(1)
