@@ -106,8 +106,8 @@ def acMain(ac_version):
     # Throttle meter title (the bar is drawn in GL)
     throttle_title_label = ac.addLabel(appWindow, "THROTTLE")
     ac.setPosition(throttle_title_label, 12, 200)
-    ac.setFontSize(throttle_title_label, 18)
-    ac.setFontColor(throttle_title_label, 0.7, 0.7, 0.7, 1.0)
+    ac.setFontSize(throttle_title_label, 24)
+    ac.setFontColor(throttle_title_label, 1.0, 1.0, 1.0, 1.0)
 
     stats_label = ac.addLabel(appWindow, "")
     ac.setPosition(stats_label, 12, 260)
@@ -154,7 +154,7 @@ def apply_scale():
     ac.setPosition(yaw_label, int(12 * s), int(165 * s))
     ac.setFontSize(yaw_label, int(18 * s))
     ac.setPosition(throttle_title_label, int(12 * s), int(200 * s))
-    ac.setFontSize(throttle_title_label, int(18 * s))
+    ac.setFontSize(throttle_title_label, int(24 * s))
     ac.setPosition(stats_label, int(12 * s), int(260 * s))
     ac.setFontSize(stats_label, int(14 * s))
 
