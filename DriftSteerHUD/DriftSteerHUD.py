@@ -15,18 +15,23 @@ TIRE_HEIGHT = 60
 STEERING_RATIO = 14.0
 
 # Temperature color thresholds (Celsius)
-# Based on real-world tire data: peak grip ~75-90C for most compounds
-# Drifting runs rears hotter due to constant sliding
-TEMP_COLD = 50.0          # Deep blue - no grip, way too cold
-TEMP_COOL = 70.0          # Light blue - warming up
-TEMP_OPTIMAL_LOW = 75.0   # Green zone starts - good grip
-TEMP_OPTIMAL_HIGH = 100.0 # Green zone ends - still strong
-TEMP_HOT = 120.0          # Deep red - destroying the tires
+TEMP_COLD = 50.0
+TEMP_COOL = 70.0
+TEMP_OPTIMAL_LOW = 75.0
+TEMP_OPTIMAL_HIGH = 100.0
+TEMP_HOT = 120.0
+
+# Car body dimensions (relative to center, before scaling)
+CAR_BODY_W = 130  # total width
+CAR_BODY_H = 200  # total height
 
 scale = 1.0
 SCALE_STEP = 0.1
 SCALE_MIN = 0.5
 SCALE_MAX = 3.0
+
+prev_slip = 0.0
+slip_smooth = 0.0
 
 
 def acMain(ac_version):
@@ -80,76 +85,143 @@ def onDecrease(*args):
 def temp_to_color(temp):
     """Return (r, g, b): blue -> green -> yellow -> orange -> red."""
     if temp < TEMP_COLD:
-        # Blue - way too cold
         return (0.1, 0.3, 1.0)
     elif temp < TEMP_OPTIMAL_LOW:
-        # Blue to green (warming up)
         t = (temp - TEMP_COLD) / (TEMP_OPTIMAL_LOW - TEMP_COLD)
         return (0.1 * (1.0 - t), 0.3 + 0.7 * t, 1.0 * (1.0 - t))
     elif temp < TEMP_OPTIMAL_HIGH:
-        # Green - ideal
         return (0.0, 1.0, 0.0)
     elif temp < TEMP_HOT:
-        # Green -> yellow -> orange -> red
         t = (temp - TEMP_OPTIMAL_HIGH) / (TEMP_HOT - TEMP_OPTIMAL_HIGH)
         if t < 0.33:
-            # Green to yellow
             s = t / 0.33
             return (s, 1.0, 0.0)
         elif t < 0.66:
-            # Yellow to orange
             s = (t - 0.33) / 0.33
             return (1.0, 1.0 - 0.5 * s, 0.0)
         else:
-            # Orange to red
             s = (t - 0.66) / 0.34
             return (1.0, 0.5 * (1.0 - s), 0.0)
     else:
-        # Red - destroying tires
         return (1.0, 0.0, 0.0)
 
 
+def rotate_point(x, y, angle_rad, cx, cy):
+    """Rotate point (x,y) around (cx,cy) by angle_rad."""
+    dx = x - cx
+    dy = y - cy
+    rx = dx * math.cos(angle_rad) - dy * math.sin(angle_rad)
+    ry = dx * math.sin(angle_rad) + dy * math.cos(angle_rad)
+    return (cx + rx, cy + ry)
+
+
+def get_body_slip_angle(car):
+    """Get body slip angle in degrees from local velocity."""
+    try:
+        lv = ac.getCarState(car, acsys.CS.LocalVelocity)
+        lvx = lv[0]  # lateral
+        lvz = lv[2]  # forward
+        if abs(lvz) < 0.5:
+            return 0.0
+        return -math.degrees(math.atan2(lvx, abs(lvz)))
+    except Exception:
+        return 0.0
+
+
+
 def onFormRender(deltaT):
-    global angle_label
+    global angle_label, slip_smooth
 
     ac.setBackgroundOpacity(appWindow, 0.0)
 
     car = ac.getFocusedCar()
 
-    # Steer returns degrees despite docs saying radians
+    # Steer angle
     try:
         steer_angle = ac.getCarState(car, acsys.CS.Steer)
         tire_angle_deg = steer_angle / STEERING_RATIO
     except Exception:
         tire_angle_deg = 0.0
 
-    # Tire temperatures (returns 4D vector: FL, FR, RL, RR)
+    # Body slip angle
+    body_slip_deg = get_body_slip_angle(car)
+    slip_smooth = slip_smooth * 0.85 + body_slip_deg * 0.15
+
+    # Tire temperatures
     fl_temp = fr_temp = rl_temp = rr_temp = 70.0
     try:
         fl_temp, fr_temp, rl_temp, rr_temp = ac.getCarState(car, acsys.CS.CurrentTyresCoreTemp)
     except Exception:
         pass
 
-    ac.setText(angle_label, "{:.1f}".format(tire_angle_deg))
+    ac.setText(angle_label, "{:.1f}".format(slip_smooth))
 
-    tw = TIRE_WIDTH * scale
-    th = TIRE_HEIGHT * scale
-    spacing = 50 * scale
-    cx = APP_WIDTH / 2.0
+    s = scale
+    tw = TIRE_WIDTH * s
+    th = TIRE_HEIGHT * s
 
-    # Front tires (rotated by steering)
-    front_y = APP_HEIGHT * 0.3
-    draw_tire(cx - spacing, front_y, tire_angle_deg, tw, th, fl_temp)
-    draw_tire(cx + spacing, front_y, tire_angle_deg, tw, th, fr_temp)
+    # Center of the car in widget space
+    car_cx = APP_WIDTH / 2.0
+    car_cy = APP_HEIGHT / 2.0
 
-    # Rear tires (no rotation)
-    rear_y = APP_HEIGHT * 0.7
-    draw_tire(cx - spacing, rear_y, 0.0, tw, th, rl_temp)
-    draw_tire(cx + spacing, rear_y, 0.0, tw, th, rr_temp)
+    # Body slip rotation (the whole car rotates)
+    body_rad = math.radians(slip_smooth)
+
+    # Car body outline
+    bw = CAR_BODY_W * s / 2.0
+    bh = CAR_BODY_H * s / 2.0
+    body_corners = [
+        (car_cx - bw, car_cy - bh),
+        (car_cx + bw, car_cy - bh),
+        (car_cx + bw, car_cy + bh),
+        (car_cx - bw, car_cy + bh),
+    ]
+    rotated_body = [rotate_point(x, y, body_rad, car_cx, car_cy) for x, y in body_corners]
+
+    # Draw car body (semi-transparent fill)
+    ac.glBegin(3)
+    ac.glColor4f(0.2, 0.2, 0.2, 0.5)
+    for x, y in rotated_body:
+        ac.glVertex2f(x, y)
+    ac.glEnd()
+
+    # Body outline
+    ac.glBegin(1)
+    ac.glColor4f(0.8, 0.8, 0.8, 0.6)
+    for i in range(4):
+        x1, y1 = rotated_body[i]
+        x2, y2 = rotated_body[(i + 1) % 4]
+        ac.glVertex2f(x1, y1)
+        ac.glVertex2f(x2, y2)
+    ac.glEnd()
+
+    # Wheel positions relative to car center (before rotation)
+    spacing = 50 * s
+    front_offset_y = -70 * s  # front axle offset from center
+    rear_offset_y = 70 * s    # rear axle offset from center
+
+    # Front left
+    fl_cx, fl_cy = car_cx - spacing, car_cy + front_offset_y
+    fl_cx, fl_cy = rotate_point(fl_cx, fl_cy, body_rad, car_cx, car_cy)
+    draw_tire(fl_cx, fl_cy, body_rad + math.radians(tire_angle_deg), tw, th, fl_temp)
+
+    # Front right
+    fr_cx, fr_cy = car_cx + spacing, car_cy + front_offset_y
+    fr_cx, fr_cy = rotate_point(fr_cx, fr_cy, body_rad, car_cx, car_cy)
+    draw_tire(fr_cx, fr_cy, body_rad + math.radians(tire_angle_deg), tw, th, fr_temp)
+
+    # Rear left
+    rl_cx, rl_cy = car_cx - spacing, car_cy + rear_offset_y
+    rl_cx, rl_cy = rotate_point(rl_cx, rl_cy, body_rad, car_cx, car_cy)
+    draw_tire(rl_cx, rl_cy, body_rad, tw, th, rl_temp)
+
+    # Rear right
+    rr_cx, rr_cy = car_cx + spacing, car_cy + rear_offset_y
+    rr_cx, rr_cy = rotate_point(rr_cx, rr_cy, body_rad, car_cx, car_cy)
+    draw_tire(rr_cx, rr_cy, body_rad, tw, th, rr_temp)
 
 
-def draw_tire(cx, cy, angle_deg, tw, th, temp):
-    angle_rad = math.radians(angle_deg)
+def draw_tire(cx, cy, angle_rad, tw, th, temp):
     hw = tw / 2.0
     hh = th / 2.0
 

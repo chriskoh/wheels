@@ -322,8 +322,8 @@ def onFormRender(deltaT):
     prev_slip_angle = slip_angle
     prev_speed = speed
 
-    angle_rate_smooth = angle_rate_smooth * 0.90 + raw_angle_rate * 0.10
-    speed_rate_smooth = speed_rate_smooth * 0.90 + raw_speed_rate * 0.10
+    angle_rate_smooth = angle_rate_smooth * 0.95 + raw_angle_rate * 0.05
+    speed_rate_smooth = speed_rate_smooth * 0.95 + raw_speed_rate * 0.05
 
     # Combined signal:
     # Positive = too much gas (angle growing fast, speed climbing)
@@ -416,8 +416,8 @@ def draw_throttle_meter(active):
         return
 
     # Map angle_rate_smooth to position (tight range = sensitive needle)
-    clamped = max(-50.0, min(50.0, throttle_signal))
-    normalized = clamped / 50.0
+    clamped = max(-80.0, min(80.0, throttle_signal))
+    normalized = clamped / 80.0
 
     # Needle position — very chunky
     needle_x = center_x + normalized * (bar_w / 2.0)
