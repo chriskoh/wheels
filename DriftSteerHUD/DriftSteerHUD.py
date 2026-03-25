@@ -2,10 +2,8 @@ import ac
 import acsys
 import math
 
-# App globals
+app = "DriftSteerHUD"
 appWindow = 0
-tire_left = 0
-tire_right = 0
 angle_label = 0
 
 APP_WIDTH = 200
@@ -21,37 +19,42 @@ STEERING_RATIO = 14.0
 def acMain(ac_version):
     global appWindow, angle_label
 
-    appWindow = ac.newApp("DriftSteerHUD")
+    appWindow = ac.newApp(app)
     ac.setSize(appWindow, APP_WIDTH, APP_HEIGHT)
-    ac.setTitle(appWindow, "Drift Steer HUD")
+    ac.setTitle(appWindow, "")
+    ac.setIconPosition(appWindow, 0, -10000)
     ac.setBackgroundOpacity(appWindow, 0.5)
+    ac.drawBorder(appWindow, 0)
 
     # Label to show the numeric tire angle
-    angle_label = ac.addLabel(appWindow, "0.0°")
+    angle_label = ac.addLabel(appWindow, "0.0")
     ac.setPosition(angle_label, APP_WIDTH // 2 - 20, APP_HEIGHT - 30)
     ac.setFontSize(angle_label, 16)
     ac.setFontColor(angle_label, 1.0, 1.0, 1.0, 1.0)
 
-    ac.addRenderCallback(appWindow, onRender)
-    ac.console("DriftSteerHUD loaded")
-    return "DriftSteerHUD"
+    ac.addRenderCallback(appWindow, onFormRender)
+    ac.log("[" + app + "] Loaded")
+    return app
 
 
 def acUpdate(deltaT):
     pass
 
 
-def onRender(deltaT):
+def onFormRender(deltaT):
     global angle_label
 
+    ac.setBackgroundOpacity(appWindow, 0.5)
+
     # Get steering wheel angle in degrees
-    steer_angle = ac.getCarState(0, acsys.CS.SteerAngle)
+    car = ac.getFocusedCar()
+    steer_angle = ac.getCarState(car, acsys.CS.Steer)
 
     # Convert to approximate tire angle
     tire_angle_deg = steer_angle / STEERING_RATIO
 
     # Update the numeric label
-    ac.setText(angle_label, "{:.1f}°".format(tire_angle_deg))
+    ac.setText(angle_label, "{:.1f}".format(tire_angle_deg))
 
     # Draw the two tires
     center_y = APP_HEIGHT // 2 - 10
@@ -63,7 +66,7 @@ def onRender(deltaT):
 
 
 def draw_tire(cx, cy, angle_deg):
-    """Draw a rotated rectangle representing a tire."""
+    """Draw a rotated rectangle representing a tire using AC's GL functions."""
     angle_rad = math.radians(angle_deg)
     hw = TIRE_WIDTH / 2.0
     hh = TIRE_HEIGHT / 2.0
@@ -83,39 +86,28 @@ def draw_tire(cx, cy, angle_deg):
         ry = x * math.sin(angle_rad) + y * math.cos(angle_rad)
         rotated.append((cx + rx, cy + ry))
 
-    # Draw filled quad using AC's OpenGL rendering
-    try:
-        import ctypes
-        from ctypes import c_float
-        gl = ctypes.cdll.opengl32
+    # Draw filled quad (dark tire color)
+    ac.glBegin(3)  # GL_QUADS
+    ac.glColor4f(0.2, 0.2, 0.2, 0.9)
+    for x, y in rotated:
+        ac.glVertex2f(x, y)
+    ac.glEnd()
 
-        GL_QUADS = 0x0007
+    # Draw white outline
+    ac.glBegin(1)  # GL_LINES
+    ac.glColor4f(1.0, 1.0, 1.0, 0.8)
+    for i in range(4):
+        x1, y1 = rotated[i]
+        x2, y2 = rotated[(i + 1) % 4]
+        ac.glVertex2f(x1, y1)
+        ac.glVertex2f(x2, y2)
+    ac.glEnd()
 
-        # Dark tire color
-        gl.glColor4f(c_float(0.2), c_float(0.2), c_float(0.2), c_float(0.9))
-        gl.glBegin(GL_QUADS)
-        for x, y in rotated:
-            gl.glVertex2f(c_float(x), c_float(y))
-        gl.glEnd()
-
-        # White outline
-        GL_LINE_LOOP = 0x0002
-        gl.glColor4f(c_float(1.0), c_float(1.0), c_float(1.0), c_float(0.8))
-        gl.glLineWidth(c_float(2.0))
-        gl.glBegin(GL_LINE_LOOP)
-        for x, y in rotated:
-            gl.glVertex2f(c_float(x), c_float(y))
-        gl.glEnd()
-
-        # Direction indicator line (top center of tire, shows forward direction)
-        gl.glColor4f(c_float(1.0), c_float(0.3), c_float(0.3), c_float(1.0))
-        gl.glLineWidth(c_float(3.0))
-        gl.glBegin(0x0001)  # GL_LINES
-        gl.glVertex2f(c_float(cx), c_float(cy))
-        tip_x = cx + hh * math.sin(angle_rad) * -1
-        tip_y = cy - hh * math.cos(angle_rad)
-        gl.glVertex2f(c_float(tip_x), c_float(tip_y))
-        gl.glEnd()
-
-    except Exception as e:
-        ac.console("DriftSteerHUD render error: " + str(e))
+    # Direction indicator line (red, points forward from tire center)
+    ac.glBegin(1)  # GL_LINES
+    ac.glColor4f(1.0, 0.3, 0.3, 1.0)
+    ac.glVertex2f(cx, cy)
+    tip_x = cx - hh * math.sin(angle_rad)
+    tip_y = cy - hh * math.cos(angle_rad)
+    ac.glVertex2f(tip_x, tip_y)
+    ac.glEnd()
