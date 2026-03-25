@@ -16,8 +16,8 @@ throttle_title_label = 0
 btn_increase = 0
 btn_decrease = 0
 
-BASE_WIDTH = 280
-BASE_HEIGHT = 340
+BASE_WIDTH = 320
+BASE_HEIGHT = 420
 
 # Drift state thresholds
 DRIFT_ANGLE_MIN = 5.0
@@ -79,39 +79,39 @@ def acMain(ac_version):
     ac.addOnClickedListener(btn_increase, onIncrease)
 
     slip_angle_label = ac.addLabel(appWindow, "DRIFT ANGLE")
-    ac.setPosition(slip_angle_label, BASE_WIDTH // 2 - 50, 5)
-    ac.setFontSize(slip_angle_label, 14)
+    ac.setPosition(slip_angle_label, BASE_WIDTH // 2 - 55, 5)
+    ac.setFontSize(slip_angle_label, 16)
     ac.setFontColor(slip_angle_label, 0.7, 0.7, 0.7, 1.0)
 
     slip_value_label = ac.addLabel(appWindow, "0.0")
-    ac.setPosition(slip_value_label, BASE_WIDTH // 2 - 40, 25)
-    ac.setFontSize(slip_value_label, 42)
+    ac.setPosition(slip_value_label, BASE_WIDTH // 2 - 45, 28)
+    ac.setFontSize(slip_value_label, 48)
     ac.setFontColor(slip_value_label, 1.0, 1.0, 1.0, 1.0)
 
     state_label = ac.addLabel(appWindow, "GRIP")
-    ac.setPosition(state_label, BASE_WIDTH // 2 - 40, 80)
-    ac.setFontSize(state_label, 22)
+    ac.setPosition(state_label, BASE_WIDTH // 2 - 50, 90)
+    ac.setFontSize(state_label, 28)
     ac.setFontColor(state_label, 0.5, 1.0, 0.5, 1.0)
 
     countersteer_label = ac.addLabel(appWindow, "STEER: ---")
-    ac.setPosition(countersteer_label, 10, 115)
-    ac.setFontSize(countersteer_label, 16)
+    ac.setPosition(countersteer_label, 12, 135)
+    ac.setFontSize(countersteer_label, 18)
     ac.setFontColor(countersteer_label, 1.0, 1.0, 1.0, 1.0)
 
     yaw_label = ac.addLabel(appWindow, "YAW: 0.0")
-    ac.setPosition(yaw_label, 10, 140)
-    ac.setFontSize(yaw_label, 16)
+    ac.setPosition(yaw_label, 12, 165)
+    ac.setFontSize(yaw_label, 18)
     ac.setFontColor(yaw_label, 1.0, 1.0, 1.0, 1.0)
 
     # Throttle meter title (the bar is drawn in GL)
     throttle_title_label = ac.addLabel(appWindow, "THROTTLE")
-    ac.setPosition(throttle_title_label, 10, 165)
-    ac.setFontSize(throttle_title_label, 12)
+    ac.setPosition(throttle_title_label, 12, 200)
+    ac.setFontSize(throttle_title_label, 14)
     ac.setFontColor(throttle_title_label, 0.7, 0.7, 0.7, 1.0)
 
     stats_label = ac.addLabel(appWindow, "")
-    ac.setPosition(stats_label, 10, 210)
-    ac.setFontSize(stats_label, 13)
+    ac.setPosition(stats_label, 12, 260)
+    ac.setFontSize(stats_label, 14)
     ac.setFontColor(stats_label, 0.7, 0.7, 0.7, 1.0)
 
     ac.addRenderCallback(appWindow, onFormRender)
@@ -143,20 +143,20 @@ def apply_scale():
     h = int(BASE_HEIGHT * s)
     ac.setSize(appWindow, w, h)
 
-    ac.setPosition(slip_angle_label, w // 2 - int(50 * s), int(5 * s))
-    ac.setFontSize(slip_angle_label, int(14 * s))
-    ac.setPosition(slip_value_label, w // 2 - int(40 * s), int(25 * s))
-    ac.setFontSize(slip_value_label, int(42 * s))
-    ac.setPosition(state_label, w // 2 - int(40 * s), int(80 * s))
-    ac.setFontSize(state_label, int(22 * s))
-    ac.setPosition(countersteer_label, int(10 * s), int(115 * s))
-    ac.setFontSize(countersteer_label, int(16 * s))
-    ac.setPosition(yaw_label, int(10 * s), int(140 * s))
-    ac.setFontSize(yaw_label, int(16 * s))
-    ac.setPosition(throttle_title_label, int(10 * s), int(165 * s))
-    ac.setFontSize(throttle_title_label, int(12 * s))
-    ac.setPosition(stats_label, int(10 * s), int(210 * s))
-    ac.setFontSize(stats_label, int(13 * s))
+    ac.setPosition(slip_angle_label, w // 2 - int(55 * s), int(5 * s))
+    ac.setFontSize(slip_angle_label, int(16 * s))
+    ac.setPosition(slip_value_label, w // 2 - int(45 * s), int(28 * s))
+    ac.setFontSize(slip_value_label, int(48 * s))
+    ac.setPosition(state_label, w // 2 - int(50 * s), int(90 * s))
+    ac.setFontSize(state_label, int(28 * s))
+    ac.setPosition(countersteer_label, int(12 * s), int(135 * s))
+    ac.setFontSize(countersteer_label, int(18 * s))
+    ac.setPosition(yaw_label, int(12 * s), int(165 * s))
+    ac.setFontSize(yaw_label, int(18 * s))
+    ac.setPosition(throttle_title_label, int(12 * s), int(200 * s))
+    ac.setFontSize(throttle_title_label, int(14 * s))
+    ac.setPosition(stats_label, int(12 * s), int(260 * s))
+    ac.setFontSize(stats_label, int(14 * s))
 
 
 def get_body_slip_angle(car):
@@ -348,7 +348,7 @@ def onFormRender(deltaT):
 def draw_throttle_meter(active):
     """Draw a horizontal bar with a green target zone and a thick visible needle."""
     s = scale
-    bar_y = 182 * s
+    bar_y = 220 * s
     bar_x = 10 * s
     bar_w = (BASE_WIDTH - 20) * s
     bar_h = 30 * s
