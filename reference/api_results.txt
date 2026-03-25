@@ -1,0 +1,112 @@
+=== AC API PROBE RESULTS ===
+
+--- WORKING (92) ---
+  [float] Scalar.Steer = 130.6260
+  [float] Scalar.Gas = 0.0000
+  [float] Scalar.Brake = 0.0000
+  [float] Scalar.Clutch = 1.0000
+  [int] Scalar.Gear = 1
+  [float] Scalar.RPM = 82.5060
+  [float] Scalar.SpeedKMH = 1.2078
+  [float] Scalar.SpeedMPH = 0.7505
+  [float] Scalar.SpeedMS = 0.3355
+  [int] Scalar.BestLap = 0
+  [int] Scalar.LapTime = 144
+  [int] Scalar.LastLap = 0
+  [int] Scalar.LapCount = 0
+  [int] Scalar.LapInvalidated = 0
+  [float] Scalar.CGHeight = 0.4437
+  [float] Scalar.DriveTrainSpeed = 0.0010
+  [float] Scalar.DriftPoints = 0.0000
+  [float] Scalar.DriftBestLap = 0.0000
+  [float] Scalar.DriftLastLap = 0.0000
+  [float] Scalar.InstantDrift = 0.0000
+  [int] Scalar.IsDriftInvalid = 1
+  [int] Scalar.IsEngineLimiterOn = 0
+  [float] Scalar.LastFF = 0.0006
+  [float] Scalar.NormalizedSplinePosition = 0.2229
+  [float] Scalar.PerformanceMeter = 0.0000
+  [float] Scalar.TurboBoost = 0.0000
+  [float] Scalar.Caster = -8.5046
+  [vector[3]] Vec3.AccG = 0.000, 0.000, 0.000
+  [vector[3]] Vec3.LocalAngularVelocity = 0.073, -0.008, -0.050
+  [vector[3]] Vec3.LocalVelocity = 0.002, -0.335, 0.009
+  [vector[3]] Vec3.Velocity = 0.002, -0.335, 0.012
+  [vector[3]] Vec3.SpeedTotal = 1.208, 0.750, 0.335
+  [vector[3]] Vec3.WorldPosition = 2007.468, -1047.609, 1084.466
+  [vector[4]] Vec3.WheelAngularSpeed = -0.000, 0.000, 0.001, 0.001
+  [vector[4]] Vec4.SlipAngle = -8.460, 13.443, -5.319, 6.006
+  [vector[4]] Vec4.SlipRatio = 0.019, -0.011, 0.001, 0.003
+  [vector[4]] Vec4.Load = 2624.345, 2837.517, 4199.660, 4086.084
+  [vector[4]] Vec4.CamberRad = -0.106, -0.041, -0.016, -0.016
+  [vector[4]] Vec4.CurrentTyresCoreTemp = 26.000, 26.000, 26.000, 26.000
+  [vector[3]] Vec4.LastTyresTemp = -200.000, -200.000, -200.000
+  [vector[4]] Vec4.DynamicPressure = 30.000, 30.000, 30.000, 30.000
+  [vector[4]] Vec4.SuspensionTravel = 0.019, 0.023, 0.045, 0.045
+  [vector[4]] Vec4.TyreDirtyLevel = 0.000, 0.000, 0.000, 0.000
+  [vector[4]] Vec4.Mz = 0.047, 0.436, 1.752, -2.102
+  [vector[4]] Vec4.NdSlip = 0.963, 1.474, 0.552, 0.622
+  [vector[4]] Vec4.TyreSlip = 0.000, 0.000, 0.000, 0.000
+  [vector[4]] Vec4.DY = 1.261, 1.314, 1.247, 1.250
+  [vector[4]] Vec4.TyreRadius = 0.303, 0.303, 0.303, 0.303
+  [vector[4]] Vec4.TyreLoadedRadius = 0.293, 0.292, 0.287, 0.287
+  [vector[3]] PerWheel.TyreContactPoint.FL = 2008.273, -1048.052, 1085.670
+  [vector[3]] PerWheel.TyreContactPoint.FR = 2006.667, -1048.052, 1085.636
+  [vector[3]] PerWheel.TyreContactPoint.RL = 2008.246, -1048.052, 1082.955
+  [vector[3]] PerWheel.TyreContactPoint.RR = 2006.688, -1048.052, 1082.955
+  [vector[3]] PerWheel.TyreContactNormal.FL = 0.000, 1.000, -0.000
+  [vector[3]] PerWheel.TyreContactNormal.FR = 0.000, 1.000, -0.000
+  [vector[3]] PerWheel.TyreContactNormal.RL = 0.000, 1.000, -0.000
+  [vector[3]] PerWheel.TyreContactNormal.RR = 0.000, 1.000, -0.000
+  [int] PerWheel.TyreHeadingVector.FL = -1
+  [int] PerWheel.TyreHeadingVector.FR = -1
+  [int] PerWheel.TyreHeadingVector.RL = -1
+  [int] PerWheel.TyreHeadingVector.RR = -1
+  [int] PerWheel.TyreRightVector.FL = -1
+  [int] PerWheel.TyreRightVector.FR = -1
+  [int] PerWheel.TyreRightVector.RL = -1
+  [int] PerWheel.TyreRightVector.RR = -1
+  [float] Aero.DragCoeff = 0.0000
+  [float] Aero.LiftFront = 0.0000
+  [float] Aero.LiftRear = 0.0000
+  [float] Extra.Aero = 0.0000
+  [vector[2]] Extra.RideHeight = 0.103, 0.092
+  [int] Extra.ERSRecovery = 0
+  [int] Extra.ERSDelivery = 0
+  [int] Extra.ERSHeatCharging = 0
+  [float] Extra.ERSCurrentKJ = 0.0000
+  [float] Extra.ERSMaxJ = 0.0000
+  [int] Extra.P2PStatus = 0
+  [int] Extra.P2PActivations = 0
+  [str] Func.getDriverName = Crees
+  [str] Func.getCarName = fumi_cp_bmw_e36_missil
+  [str] Func.getTrackName = soyo_daikoku
+  [str] Func.getTrackConfiguration = garage
+  [int] Func.getFocusedCar = 0
+  [int] Func.getCarBallast = 7
+  [float] Func.getCarMinHeight = -1.0000
+  [int] Func.isAcLive = 1
+  [int] Func.isCarInPitlane = 0
+  [str] Func.getCarSkin = springbreak
+  [str] Func.getDriverNationCode = ITA
+  [float] Func.getTrackLength = 2230.1221
+  [int] Func.getWindSpeed = 0
+  [int] Func.getWindDirection = 328
+  [int] Func.isAIControlled = 0
+
+--- ERRORS (1) ---
+  Scalar.SteerAngle : type object 'CS' has no attribute 'SteerAngle'
+
+--- MISSING (12) ---
+  Extra.ThermalState : not on acsys.CS
+  Extra.TyreWear : not on acsys.CS
+  Extra.BrakeTemperature : not on acsys.CS
+  Extra.EngineTorque : not on acsys.CS
+  Extra.EngineMaxTorque : not on acsys.CS
+  Extra.MaxRPM : not on acsys.CS
+  Extra.MaxSpeed : not on acsys.CS
+  Extra.Turbo : not on acsys.CS
+  Extra.DRSAvailable : not on acsys.CS
+  Extra.DRSEnabled : not on acsys.CS
+  Extra.KERSCharge : not on acsys.CS
+  Extra.KERSInput : not on acsys.CS
