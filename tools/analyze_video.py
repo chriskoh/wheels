@@ -154,7 +154,7 @@ def main():
         analysis = analyze_frames(frames, max_frames=args.max_frames)
 
         if args.output:
-            with open(args.output, "w") as f:
+            with open(args.output, "w", encoding="utf-8") as f:
                 f.write(analysis)
             print("Analysis written to", args.output)
         else:
