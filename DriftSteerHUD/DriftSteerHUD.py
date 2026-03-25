@@ -78,27 +78,34 @@ def onDecrease(*args):
 
 
 def temp_to_color(temp):
-    """Return (r, g, b) based on tire temperature across 5 zones."""
+    """Return (r, g, b): blue -> green -> yellow -> orange -> red."""
     if temp < TEMP_COLD:
-        # Deep blue - way too cold
-        return (0.1, 0.2, 1.0)
-    elif temp < TEMP_COOL:
-        # Blend blue to cyan (warming up)
-        t = (temp - TEMP_COLD) / (TEMP_COOL - TEMP_COLD)
-        return (0.1, 0.2 + 0.6 * t, 1.0 - 0.2 * t)
+        # Blue - way too cold
+        return (0.1, 0.3, 1.0)
     elif temp < TEMP_OPTIMAL_LOW:
-        # Blend cyan to green (almost there)
-        t = (temp - TEMP_COOL) / (TEMP_OPTIMAL_LOW - TEMP_COOL)
-        return (0.0, 0.8 + 0.2 * t, 0.8 * (1.0 - t))
+        # Blue to green (warming up)
+        t = (temp - TEMP_COLD) / (TEMP_OPTIMAL_LOW - TEMP_COLD)
+        return (0.1 * (1.0 - t), 0.3 + 0.7 * t, 1.0 * (1.0 - t))
     elif temp < TEMP_OPTIMAL_HIGH:
-        # Green - optimal grip
+        # Green - ideal
         return (0.0, 1.0, 0.0)
     elif temp < TEMP_HOT:
-        # Blend green to red (overheating)
+        # Green -> yellow -> orange -> red
         t = (temp - TEMP_OPTIMAL_HIGH) / (TEMP_HOT - TEMP_OPTIMAL_HIGH)
-        return (t, 1.0 * (1.0 - t), 0.0)
+        if t < 0.33:
+            # Green to yellow
+            s = t / 0.33
+            return (s, 1.0, 0.0)
+        elif t < 0.66:
+            # Yellow to orange
+            s = (t - 0.33) / 0.33
+            return (1.0, 1.0 - 0.5 * s, 0.0)
+        else:
+            # Orange to red
+            s = (t - 0.66) / 0.34
+            return (1.0, 0.5 * (1.0 - s), 0.0)
     else:
-        # Deep red - destroying tires
+        # Red - destroying tires
         return (1.0, 0.0, 0.0)
 
 
