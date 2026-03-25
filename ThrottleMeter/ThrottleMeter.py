@@ -13,7 +13,10 @@ DRIFT_ANGLE_MIN = 5.0
 
 # Smoothing
 prev_slip_angle = 0.0
+prev_speed = 0.0
 angle_rate_smooth = 0.0
+speed_rate_smooth = 0.0
+throttle_signal = 0.0
 
 # Scale
 scale = 0.6
@@ -79,7 +82,8 @@ def get_body_slip_angle(car):
 
 
 def onFormRender(deltaT):
-    global prev_slip_angle, angle_rate_smooth
+    global prev_slip_angle, prev_speed
+    global angle_rate_smooth, speed_rate_smooth, throttle_signal
 
     ac.setBackgroundOpacity(appWindow, 0.0)
 
@@ -87,15 +91,32 @@ def onFormRender(deltaT):
     slip_angle = get_body_slip_angle(car)
     abs_angle = abs(slip_angle)
 
-    # Angle rate of change
-    if deltaT > 0:
-        raw_rate = (abs_angle - abs(prev_slip_angle)) / deltaT
-    else:
-        raw_rate = 0.0
-    prev_slip_angle = slip_angle
+    speed = 0.0
+    try:
+        speed = ac.getCarState(car, acsys.CS.SpeedKMH)
+    except Exception:
+        pass
 
-    # Smooth
-    angle_rate_smooth = angle_rate_smooth * 0.92 + raw_rate * 0.08
+    # Angle rate of change (deg/s)
+    if deltaT > 0:
+        raw_angle_rate = (abs_angle - abs(prev_slip_angle)) / deltaT
+        raw_speed_rate = (speed - prev_speed) / deltaT
+    else:
+        raw_angle_rate = 0.0
+        raw_speed_rate = 0.0
+    prev_slip_angle = slip_angle
+    prev_speed = speed
+
+    # Smooth both signals
+    angle_rate_smooth = angle_rate_smooth * 0.92 + raw_angle_rate * 0.08
+    speed_rate_smooth = speed_rate_smooth * 0.92 + raw_speed_rate * 0.08
+
+    # Combined throttle signal:
+    # Positive = angle growing OR speed increasing too fast (too much gas)
+    # Negative = angle shrinking OR speed dropping (not enough gas)
+    # Angle rate is primary, speed rate is secondary correction
+    # Speed rate scaled: losing 10 km/h per second is significant
+    throttle_signal = angle_rate_smooth + speed_rate_smooth * 2.0
 
     is_drifting = abs_angle > DRIFT_ANGLE_MIN
 
@@ -146,10 +167,8 @@ def draw_vertical_meter(active):
     if not active:
         return
 
-    # Map rate to vertical position
-    # Positive rate (angle growing, too much gas) = needle goes UP
-    # Negative rate (drift dying, need more gas) = needle goes DOWN
-    clamped = max(-120.0, min(120.0, angle_rate_smooth))
+    # Map combined throttle signal to position
+    clamped = max(-120.0, min(120.0, throttle_signal))
     normalized = clamped / 120.0
 
     # UP = too much, DOWN = not enough
