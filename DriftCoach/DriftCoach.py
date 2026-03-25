@@ -337,53 +337,60 @@ def draw_throttle_meter(active):
     bar_y = 182 * s
     bar_x = 10 * s
     bar_w = (BASE_WIDTH - 20) * s
-    bar_h = 24 * s
+    bar_h = 30 * s
     center_x = bar_x + bar_w / 2.0
 
     # Background bar
     ac.glBegin(3)
-    ac.glColor4f(0.15, 0.15, 0.15, 0.8)
+    ac.glColor4f(0.1, 0.1, 0.1, 0.85)
     ac.glVertex2f(bar_x, bar_y)
     ac.glVertex2f(bar_x + bar_w, bar_y)
     ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
     ac.glVertex2f(bar_x, bar_y + bar_h)
     ac.glEnd()
 
-    # Green target zone in the center (wider)
+    # Green target zone — shifted slightly right since positive rate is normal during drift
     zone_w = bar_w * 0.35
+    zone_offset = bar_w * 0.05
+    zone_left = center_x - zone_w / 2 + zone_offset
+    zone_right = center_x + zone_w / 2 + zone_offset
     ac.glBegin(3)
     ac.glColor4f(0.1, 0.4, 0.1, 0.6)
-    ac.glVertex2f(center_x - zone_w / 2, bar_y)
-    ac.glVertex2f(center_x + zone_w / 2, bar_y)
-    ac.glVertex2f(center_x + zone_w / 2, bar_y + bar_h)
-    ac.glVertex2f(center_x - zone_w / 2, bar_y + bar_h)
+    ac.glVertex2f(zone_left, bar_y)
+    ac.glVertex2f(zone_right, bar_y)
+    ac.glVertex2f(zone_right, bar_y + bar_h)
+    ac.glVertex2f(zone_left, bar_y + bar_h)
     ac.glEnd()
 
-    # Zone border lines (brighter)
+    # Zone border lines
     ac.glBegin(0)
     ac.glColor4f(0.3, 1.0, 0.3, 0.8)
-    ac.glVertex2f(center_x - zone_w / 2, bar_y)
-    ac.glVertex2f(center_x - zone_w / 2, bar_y + bar_h)
+    ac.glVertex2f(zone_left, bar_y)
+    ac.glVertex2f(zone_left, bar_y + bar_h)
     ac.glEnd()
     ac.glBegin(0)
     ac.glColor4f(0.3, 1.0, 0.3, 0.8)
-    ac.glVertex2f(center_x + zone_w / 2, bar_y)
-    ac.glVertex2f(center_x + zone_w / 2, bar_y + bar_h)
+    ac.glVertex2f(zone_right, bar_y)
+    ac.glVertex2f(zone_right, bar_y + bar_h)
     ac.glEnd()
 
     if not active:
         return
 
     # Map angle_rate_smooth to position
-    # Range: -80 to +80 deg/s (wider range = less sensitive)
-    clamped = max(-80.0, min(80.0, angle_rate_smooth))
+    # Offset by +10 so small positive rates (normal during drift) center in green
+    adjusted = angle_rate_smooth - 10.0
+    clamped = max(-80.0, min(80.0, adjusted))
     normalized = clamped / 80.0
 
-    # Needle position and size — MUCH wider now
+    # Needle position — very chunky
     needle_x = center_x + normalized * (bar_w / 2.0)
-    needle_w = 10 * s
+    needle_w = 14 * s
 
-    # Smooth color gradient — wider green zone (0.2 = 20% of bar each side)
+    # Clamp needle to bar bounds
+    needle_x = max(bar_x + needle_w + 2, min(bar_x + bar_w - needle_w - 2, needle_x))
+
+    # Color based on distance from center
     abs_n = abs(normalized)
     if abs_n < 0.2:
         nr, ng, nb = 0.3, 1.0, 0.3
@@ -393,27 +400,27 @@ def draw_throttle_meter(active):
         ng = 1.0 - 0.3 * t
         nb = 0.3 * (1.0 - t)
     else:
-        t = (abs_n - 0.55) / 0.45
+        t = min(1.0, (abs_n - 0.55) / 0.45)
         nr = 1.0
         ng = 0.7 * (1.0 - t)
         nb = 0.1 * (1.0 - t)
 
-    # White outline around needle for visibility
+    # White outline
     ac.glBegin(3)
-    ac.glColor4f(1.0, 1.0, 1.0, 0.9)
-    ac.glVertex2f(needle_x - needle_w - 1, bar_y)
-    ac.glVertex2f(needle_x + needle_w + 1, bar_y)
-    ac.glVertex2f(needle_x + needle_w + 1, bar_y + bar_h)
-    ac.glVertex2f(needle_x - needle_w - 1, bar_y + bar_h)
+    ac.glColor4f(1.0, 1.0, 1.0, 1.0)
+    ac.glVertex2f(needle_x - needle_w - 2, bar_y)
+    ac.glVertex2f(needle_x + needle_w + 2, bar_y)
+    ac.glVertex2f(needle_x + needle_w + 2, bar_y + bar_h)
+    ac.glVertex2f(needle_x - needle_w - 2, bar_y + bar_h)
     ac.glEnd()
 
     # Colored needle fill
     ac.glBegin(3)
     ac.glColor4f(nr, ng, nb, 1.0)
-    ac.glVertex2f(needle_x - needle_w, bar_y + 1)
-    ac.glVertex2f(needle_x + needle_w, bar_y + 1)
-    ac.glVertex2f(needle_x + needle_w, bar_y + bar_h - 1)
-    ac.glVertex2f(needle_x - needle_w, bar_y + bar_h - 1)
+    ac.glVertex2f(needle_x - needle_w, bar_y + 2)
+    ac.glVertex2f(needle_x + needle_w, bar_y + 2)
+    ac.glVertex2f(needle_x + needle_w, bar_y + bar_h - 2)
+    ac.glVertex2f(needle_x - needle_w, bar_y + bar_h - 2)
     ac.glEnd()
 
 
