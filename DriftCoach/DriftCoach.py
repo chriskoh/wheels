@@ -17,7 +17,7 @@ btn_increase = 0
 btn_decrease = 0
 
 BASE_WIDTH = 320
-BASE_HEIGHT = 420
+BASE_HEIGHT = 500
 
 # Drift state thresholds
 DRIFT_ANGLE_MIN = 5.0
@@ -105,12 +105,12 @@ def acMain(ac_version):
 
     # Throttle meter title (the bar is drawn in GL)
     throttle_title_label = ac.addLabel(appWindow, "THROTTLE")
-    ac.setPosition(throttle_title_label, 12, 200)
+    ac.setPosition(throttle_title_label, 12, 205)
     ac.setFontSize(throttle_title_label, 24)
     ac.setFontColor(throttle_title_label, 1.0, 1.0, 1.0, 1.0)
 
     stats_label = ac.addLabel(appWindow, "")
-    ac.setPosition(stats_label, 12, 260)
+    ac.setPosition(stats_label, 12, 300)
     ac.setFontSize(stats_label, 14)
     ac.setFontColor(stats_label, 0.7, 0.7, 0.7, 1.0)
 
@@ -153,9 +153,9 @@ def apply_scale():
     ac.setFontSize(countersteer_label, int(18 * s))
     ac.setPosition(yaw_label, int(12 * s), int(165 * s))
     ac.setFontSize(yaw_label, int(18 * s))
-    ac.setPosition(throttle_title_label, int(12 * s), int(200 * s))
+    ac.setPosition(throttle_title_label, int(12 * s), int(205 * s))
     ac.setFontSize(throttle_title_label, int(24 * s))
-    ac.setPosition(stats_label, int(12 * s), int(260 * s))
+    ac.setPosition(stats_label, int(12 * s), int(300 * s))
     ac.setFontSize(stats_label, int(14 * s))
 
 
@@ -356,7 +356,7 @@ def onFormRender(deltaT):
 def draw_throttle_meter(active):
     """Draw a horizontal bar with a green target zone and a thick visible needle."""
     s = scale
-    bar_y = 220 * s
+    bar_y = 250 * s
     bar_x = 10 * s
     bar_w = (BASE_WIDTH - 20) * s
     bar_h = 30 * s
