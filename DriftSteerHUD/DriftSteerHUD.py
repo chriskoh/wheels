@@ -5,17 +5,20 @@ import math
 app = "DriftSteerHUD"
 appWindow = 0
 angle_label = 0
-size_label = 0
 btn_increase = 0
 btn_decrease = 0
 
 APP_WIDTH = 200
-APP_HEIGHT = 200
+APP_HEIGHT = 250
 TIRE_WIDTH = 30
 TIRE_HEIGHT = 60
 STEERING_RATIO = 14.0
 
-# Scale factor (1.0 = default, adjustable in-game)
+# Temperature color thresholds (Celsius)
+TEMP_COLD = 60.0     # Below this = blue (too cold)
+TEMP_OPTIMAL = 85.0  # Around this = green (ideal)
+TEMP_HOT = 110.0     # Above this = red (overheating)
+
 scale = 1.0
 SCALE_STEP = 0.1
 SCALE_MIN = 0.5
@@ -23,7 +26,7 @@ SCALE_MAX = 3.0
 
 
 def acMain(ac_version):
-    global appWindow, angle_label, btn_increase, btn_decrease, size_label
+    global appWindow, angle_label, btn_increase, btn_decrease
 
     appWindow = ac.newApp(app)
     ac.setSize(appWindow, APP_WIDTH, APP_HEIGHT)
@@ -32,13 +35,11 @@ def acMain(ac_version):
     ac.setBackgroundOpacity(appWindow, 0.0)
     ac.drawBorder(appWindow, 0)
 
-    # Numeric tire angle label
     angle_label = ac.addLabel(appWindow, "0.0")
     ac.setPosition(angle_label, APP_WIDTH // 2 - 20, APP_HEIGHT - 30)
     ac.setFontSize(angle_label, 16)
     ac.setFontColor(angle_label, 1.0, 1.0, 1.0, 1.0)
 
-    # Size controls (top-left corner)
     btn_decrease = ac.addButton(appWindow, "-")
     ac.setSize(btn_decrease, 20, 20)
     ac.setPosition(btn_decrease, 2, 2)
@@ -72,6 +73,24 @@ def onDecrease(*args):
         scale -= SCALE_STEP
 
 
+def temp_to_color(temp):
+    """Return (r, g, b) based on tire temperature."""
+    if temp < TEMP_COLD:
+        # Blue (too cold)
+        return (0.2, 0.4, 1.0)
+    elif temp < TEMP_OPTIMAL:
+        # Blend from blue to green
+        t = (temp - TEMP_COLD) / (TEMP_OPTIMAL - TEMP_COLD)
+        return (0.2 * (1.0 - t), 0.4 + 0.6 * t, 1.0 * (1.0 - t) + 0.2 * t)
+    elif temp < TEMP_HOT:
+        # Blend from green to red
+        t = (temp - TEMP_OPTIMAL) / (TEMP_HOT - TEMP_OPTIMAL)
+        return (t, 1.0 * (1.0 - t), 0.2 * (1.0 - t))
+    else:
+        # Red (overheating)
+        return (1.0, 0.0, 0.0)
+
+
 def onFormRender(deltaT):
     global angle_label
 
@@ -81,21 +100,31 @@ def onFormRender(deltaT):
     steer_angle = ac.getCarState(car, acsys.CS.Steer)
     tire_angle_deg = steer_angle / STEERING_RATIO
 
+    # Get tire temps: FL, FR, RL, RR
+    fl_temp = ac.getCarState(car, acsys.CS.CurrentTyresCoreTemp, 0)
+    fr_temp = ac.getCarState(car, acsys.CS.CurrentTyresCoreTemp, 1)
+    rl_temp = ac.getCarState(car, acsys.CS.CurrentTyresCoreTemp, 2)
+    rr_temp = ac.getCarState(car, acsys.CS.CurrentTyresCoreTemp, 3)
+
     ac.setText(angle_label, "{:.1f}".format(tire_angle_deg))
 
-    # Draw tires scaled
     tw = TIRE_WIDTH * scale
     th = TIRE_HEIGHT * scale
-    center_y = APP_HEIGHT // 2 - 10
     spacing = 50 * scale
-    left_x = APP_WIDTH / 2.0 - spacing
-    right_x = APP_WIDTH / 2.0 + spacing
+    cx = APP_WIDTH / 2.0
 
-    draw_tire(left_x, center_y, tire_angle_deg, tw, th)
-    draw_tire(right_x, center_y, tire_angle_deg, tw, th)
+    # Front tires (rotated by steering)
+    front_y = APP_HEIGHT * 0.3
+    draw_tire(cx - spacing, front_y, tire_angle_deg, tw, th, fl_temp)
+    draw_tire(cx + spacing, front_y, tire_angle_deg, tw, th, fr_temp)
+
+    # Rear tires (no rotation)
+    rear_y = APP_HEIGHT * 0.7
+    draw_tire(cx - spacing, rear_y, 0.0, tw, th, rl_temp)
+    draw_tire(cx + spacing, rear_y, 0.0, tw, th, rr_temp)
 
 
-def draw_tire(cx, cy, angle_deg, tw, th):
+def draw_tire(cx, cy, angle_deg, tw, th, temp):
     angle_rad = math.radians(angle_deg)
     hw = tw / 2.0
     hh = th / 2.0
@@ -113,9 +142,10 @@ def draw_tire(cx, cy, angle_deg, tw, th):
         ry = x * math.sin(angle_rad) + y * math.cos(angle_rad)
         rotated.append((cx + rx, cy + ry))
 
-    # Filled tire
+    # Filled tire colored by temperature
+    r, g, b = temp_to_color(temp)
     ac.glBegin(3)
-    ac.glColor4f(0.2, 0.2, 0.2, 0.9)
+    ac.glColor4f(r, g, b, 0.85)
     for x, y in rotated:
         ac.glVertex2f(x, y)
     ac.glEnd()
@@ -128,13 +158,4 @@ def draw_tire(cx, cy, angle_deg, tw, th):
         x2, y2 = rotated[(i + 1) % 4]
         ac.glVertex2f(x1, y1)
         ac.glVertex2f(x2, y2)
-    ac.glEnd()
-
-    # Red direction line
-    ac.glBegin(1)
-    ac.glColor4f(1.0, 0.3, 0.3, 1.0)
-    ac.glVertex2f(cx, cy)
-    tip_x = cx - hh * math.sin(angle_rad)
-    tip_y = cy - hh * math.cos(angle_rad)
-    ac.glVertex2f(tip_x, tip_y)
     ac.glEnd()
