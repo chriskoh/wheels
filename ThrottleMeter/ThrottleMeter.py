@@ -5,8 +5,8 @@ import math
 app = "ThrottleMeter"
 appWindow = 0
 
-APP_WIDTH = 40
-APP_HEIGHT = 300
+APP_WIDTH = 30
+APP_HEIGHT = 400
 
 # Drift detection
 DRIFT_ANGLE_MIN = 5.0
@@ -168,8 +168,8 @@ def draw_vertical_meter(active):
         return
 
     # Map combined throttle signal to position
-    clamped = max(-120.0, min(120.0, throttle_signal))
-    normalized = clamped / 120.0
+    clamped = max(-160.0, min(160.0, throttle_signal))
+    normalized = clamped / 160.0
 
     # UP = too much, DOWN = not enough
     needle_y = center_y - normalized * (bar_h / 2.0)
