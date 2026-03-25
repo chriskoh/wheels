@@ -113,8 +113,8 @@ def onFormRender(deltaT):
     prev_slip_angle = slip_angle
     prev_speed = speed
 
-    angle_rate_smooth = angle_rate_smooth * 0.85 + raw_angle_rate * 0.15
-    speed_rate_smooth = speed_rate_smooth * 0.85 + raw_speed_rate * 0.15
+    angle_rate_smooth = angle_rate_smooth * 0.90 + raw_angle_rate * 0.10
+    speed_rate_smooth = speed_rate_smooth * 0.90 + raw_speed_rate * 0.10
 
     throttle_signal = angle_rate_smooth + speed_rate_smooth * 4.0
 
