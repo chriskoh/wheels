@@ -5,8 +5,8 @@ import math
 app = "ThrottleMeter"
 appWindow = 0
 
-APP_WIDTH = 50
-APP_HEIGHT = 200
+APP_WIDTH = 40
+APP_HEIGHT = 300
 
 # Drift detection
 DRIFT_ANGLE_MIN = 5.0
@@ -149,8 +149,8 @@ def draw_vertical_meter(active):
     # Map rate to vertical position
     # Positive rate (angle growing, too much gas) = needle goes UP
     # Negative rate (drift dying, need more gas) = needle goes DOWN
-    clamped = max(-80.0, min(80.0, angle_rate_smooth))
-    normalized = clamped / 80.0
+    clamped = max(-120.0, min(120.0, angle_rate_smooth))
+    normalized = clamped / 120.0
 
     # UP = too much, DOWN = not enough
     needle_y = center_y - normalized * (bar_h / 2.0)
