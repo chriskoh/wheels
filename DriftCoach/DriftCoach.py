@@ -313,6 +313,9 @@ def onFormRender(deltaT):
     # Speed gets heavy weight — losing speed during a drift is critical
     throttle_signal = angle_rate_smooth + speed_rate_smooth * 4.0
 
+    # Show signal value on the throttle label for debugging
+    ac.setText(throttle_title_label, "THR: {:.0f}".format(throttle_signal))
+
     # Draw the throttle meter bar (done in GL below)
     # Also update session stats
 
