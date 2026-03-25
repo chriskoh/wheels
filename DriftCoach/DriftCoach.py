@@ -238,7 +238,7 @@ def onFormRender(deltaT):
     # === SLIP ANGLE DISPLAY ===
     r, g, b = angle_to_color(slip_angle)
     ac.setFontColor(slip_value_label, r, g, b, 1.0)
-    ac.setText(slip_value_label, "{:.1f}".format(abs_angle))
+    ac.setText(slip_value_label, "{:.1f} ".format(abs_angle))
 
     # === STATE ===
     sr, sg, sb = state_color(drift_state)
@@ -282,7 +282,7 @@ def onFormRender(deltaT):
         ac.setFontColor(yaw_label, 1.0, 1.0, 0.3, 1.0)
     else:
         ac.setFontColor(yaw_label, 0.7, 0.7, 0.7, 1.0)
-    ac.setText(yaw_label, "YAW: {:.1f}".format(yaw_rate))
+    ac.setText(yaw_label, "YAW: {:.1f}/s".format(yaw_rate))
 
     # === THROTTLE METER (angle rate of change) ===
     if deltaT > 0:
@@ -331,41 +331,41 @@ def onFormRender(deltaT):
 
 
 def draw_throttle_meter(active):
-    """Draw a horizontal bar with a green target zone in the center."""
+    """Draw a horizontal bar with a green target zone and a thick visible needle."""
     s = scale
     bar_y = 182 * s
     bar_x = 10 * s
     bar_w = (BASE_WIDTH - 20) * s
-    bar_h = 18 * s
+    bar_h = 24 * s
     center_x = bar_x + bar_w / 2.0
 
     # Background bar
     ac.glBegin(3)
-    ac.glColor4f(0.2, 0.2, 0.2, 0.6)
+    ac.glColor4f(0.15, 0.15, 0.15, 0.8)
     ac.glVertex2f(bar_x, bar_y)
     ac.glVertex2f(bar_x + bar_w, bar_y)
     ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
     ac.glVertex2f(bar_x, bar_y + bar_h)
     ac.glEnd()
 
-    # Green target zone in the center (the range to aim for)
-    zone_w = bar_w * 0.2  # 20% of bar width
+    # Green target zone in the center
+    zone_w = bar_w * 0.2
     ac.glBegin(3)
-    ac.glColor4f(0.2, 0.6, 0.2, 0.4)
+    ac.glColor4f(0.1, 0.4, 0.1, 0.6)
     ac.glVertex2f(center_x - zone_w / 2, bar_y)
     ac.glVertex2f(center_x + zone_w / 2, bar_y)
     ac.glVertex2f(center_x + zone_w / 2, bar_y + bar_h)
     ac.glVertex2f(center_x - zone_w / 2, bar_y + bar_h)
     ac.glEnd()
 
-    # Zone border lines
+    # Zone border lines (brighter)
     ac.glBegin(0)
-    ac.glColor4f(0.3, 0.8, 0.3, 0.6)
+    ac.glColor4f(0.3, 1.0, 0.3, 0.8)
     ac.glVertex2f(center_x - zone_w / 2, bar_y)
     ac.glVertex2f(center_x - zone_w / 2, bar_y + bar_h)
     ac.glEnd()
     ac.glBegin(0)
-    ac.glColor4f(0.3, 0.8, 0.3, 0.6)
+    ac.glColor4f(0.3, 1.0, 0.3, 0.8)
     ac.glVertex2f(center_x + zone_w / 2, bar_y)
     ac.glVertex2f(center_x + zone_w / 2, bar_y + bar_h)
     ac.glEnd()
@@ -375,37 +375,45 @@ def draw_throttle_meter(active):
 
     # Map angle_rate_smooth to position
     clamped = max(-40.0, min(40.0, angle_rate_smooth))
-    normalized = clamped / 40.0  # -1 to +1
+    normalized = clamped / 40.0
 
-    # Draw indicator needle
+    # Needle position and size — MUCH wider now
     needle_x = center_x + normalized * (bar_w / 2.0)
-    needle_w = 4 * s
+    needle_w = 10 * s
 
-    # Color blends smoothly based on how far from center
+    # Smooth color gradient
     abs_n = abs(normalized)
     if abs_n < 0.1:
-        # In the zone — green
         nr, ng, nb = 0.3, 1.0, 0.3
     elif abs_n < 0.5:
-        # Blend green to yellow/orange
         t = (abs_n - 0.1) / 0.4
         nr = 0.3 + 0.7 * t
         ng = 1.0 - 0.3 * t
         nb = 0.3 * (1.0 - t)
     else:
-        # Blend orange to red
         t = (abs_n - 0.5) / 0.5
         nr = 1.0
         ng = 0.7 * (1.0 - t)
         nb = 0.1 * (1.0 - t)
 
+    # White outline around needle for visibility
     ac.glBegin(3)
-    ac.glColor4f(nr, ng, nb, 0.95)
+    ac.glColor4f(1.0, 1.0, 1.0, 0.9)
+    ac.glVertex2f(needle_x - needle_w - 1, bar_y)
+    ac.glVertex2f(needle_x + needle_w + 1, bar_y)
+    ac.glVertex2f(needle_x + needle_w + 1, bar_y + bar_h)
+    ac.glVertex2f(needle_x - needle_w - 1, bar_y + bar_h)
+    ac.glEnd()
+
+    # Colored needle fill
+    ac.glBegin(3)
+    ac.glColor4f(nr, ng, nb, 1.0)
     ac.glVertex2f(needle_x - needle_w, bar_y + 1)
     ac.glVertex2f(needle_x + needle_w, bar_y + 1)
     ac.glVertex2f(needle_x + needle_w, bar_y + bar_h - 1)
     ac.glVertex2f(needle_x - needle_w, bar_y + bar_h - 1)
     ac.glEnd()
+
 
 
 def draw_angle_arc(slip_angle):
