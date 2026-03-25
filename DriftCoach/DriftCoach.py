@@ -12,6 +12,7 @@ state_label = 0
 countersteer_label = 0
 yaw_label = 0
 stats_label = 0
+throttle_label = 0
 btn_increase = 0
 btn_decrease = 0
 
@@ -38,6 +39,8 @@ stats_spin_count = 0
 stats_drift_count = 0
 was_drifting = False
 was_spinning = False
+prev_slip_angle = 0.0
+angle_rate = 0.0
 
 # Drift states
 GRIP = 0
@@ -50,7 +53,7 @@ state_names = ["GRIP", "INITIATING", "DRIFTING", "SPINNING"]
 def acMain(ac_version):
     global appWindow
     global slip_angle_label, slip_value_label, state_label
-    global countersteer_label, yaw_label, stats_label
+    global countersteer_label, yaw_label, stats_label, throttle_label
     global btn_increase, btn_decrease
 
     appWindow = ac.newApp(app)
@@ -103,9 +106,15 @@ def acMain(ac_version):
     ac.setFontSize(yaw_label, 16)
     ac.setFontColor(yaw_label, 1.0, 1.0, 1.0, 1.0)
 
+    # Throttle coach
+    throttle_label = ac.addLabel(appWindow, "THROTTLE: ---")
+    ac.setPosition(throttle_label, 10, 165)
+    ac.setFontSize(throttle_label, 16)
+    ac.setFontColor(throttle_label, 0.6, 0.6, 0.6, 1.0)
+
     # Session stats
     stats_label = ac.addLabel(appWindow, "")
-    ac.setPosition(stats_label, 10, 175)
+    ac.setPosition(stats_label, 10, 195)
     ac.setFontSize(stats_label, 13)
     ac.setFontColor(stats_label, 0.7, 0.7, 0.7, 1.0)
 
@@ -154,7 +163,10 @@ def apply_scale():
     ac.setPosition(yaw_label, int(10 * s), int(140 * s))
     ac.setFontSize(yaw_label, int(16 * s))
 
-    ac.setPosition(stats_label, int(10 * s), int(175 * s))
+    ac.setPosition(throttle_label, int(10 * s), int(165 * s))
+    ac.setFontSize(throttle_label, int(16 * s))
+
+    ac.setPosition(stats_label, int(10 * s), int(195 * s))
     ac.setFontSize(stats_label, int(13 * s))
 
 
@@ -220,6 +232,7 @@ def onFormRender(deltaT):
     global stats_max_angle, stats_longest_drift, stats_current_drift_time
     global stats_spin_count, stats_drift_count
     global was_drifting, was_spinning
+    global prev_slip_angle, angle_rate
 
     ac.setBackgroundOpacity(appWindow, 0.7)
 
@@ -276,6 +289,39 @@ def onFormRender(deltaT):
     else:
         ac.setFontColor(yaw_label, 0.7, 0.7, 0.7, 1.0)
     ac.setText(yaw_label, "YAW: {:.1f}".format(yaw_rate))
+
+    # === THROTTLE COACH ===
+    throttle = 0.0
+    try:
+        throttle = ac.getCarState(car, acsys.CS.Gas)
+    except Exception:
+        pass
+
+    # Track angle rate of change (degrees per second)
+    if deltaT > 0:
+        angle_rate = (abs_angle - abs(prev_slip_angle)) / deltaT
+    else:
+        angle_rate = 0.0
+    prev_slip_angle = slip_angle
+
+    if is_drifting and abs_angle > DRIFT_ANGLE_MIN:
+        # angle_rate > 0 means angle is growing (more sideways)
+        # angle_rate < 0 means angle is shrinking (drift dying)
+        if angle_rate < -15.0:
+            # Angle dropping fast — drift is dying
+            ac.setText(throttle_label, "THROTTLE: MORE")
+            ac.setFontColor(throttle_label, 1.0, 0.5, 0.1, 1.0)
+        elif angle_rate > 20.0:
+            # Angle growing fast — about to spin
+            ac.setText(throttle_label, "THROTTLE: LESS")
+            ac.setFontColor(throttle_label, 1.0, 0.2, 0.2, 1.0)
+        else:
+            # Angle is stable-ish
+            ac.setText(throttle_label, "THROTTLE: GOOD")
+            ac.setFontColor(throttle_label, 0.3, 1.0, 0.3, 1.0)
+    else:
+        ac.setText(throttle_label, "THROTTLE: ---")
+        ac.setFontColor(throttle_label, 0.6, 0.6, 0.6, 1.0)
 
     # Session stats
     currently_drifting = drift_state == SUSTAINING
