@@ -304,10 +304,14 @@ def onFormRender(deltaT):
     prev_slip_angle = slip_angle
     prev_speed = speed
 
-    angle_rate_smooth = angle_rate_smooth * 0.92 + raw_angle_rate * 0.08
-    speed_rate_smooth = speed_rate_smooth * 0.92 + raw_speed_rate * 0.08
+    angle_rate_smooth = angle_rate_smooth * 0.85 + raw_angle_rate * 0.15
+    speed_rate_smooth = speed_rate_smooth * 0.85 + raw_speed_rate * 0.15
 
-    throttle_signal = angle_rate_smooth + speed_rate_smooth * 2.0
+    # Combined signal:
+    # Positive = too much gas (angle growing fast, speed climbing)
+    # Negative = not enough gas (angle shrinking, speed dropping)
+    # Speed gets heavy weight — losing speed during a drift is critical
+    throttle_signal = angle_rate_smooth + speed_rate_smooth * 4.0
 
     # Draw the throttle meter bar (done in GL below)
     # Also update session stats

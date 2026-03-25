@@ -107,16 +107,10 @@ def onFormRender(deltaT):
     prev_slip_angle = slip_angle
     prev_speed = speed
 
-    # Smooth both signals
-    angle_rate_smooth = angle_rate_smooth * 0.92 + raw_angle_rate * 0.08
-    speed_rate_smooth = speed_rate_smooth * 0.92 + raw_speed_rate * 0.08
+    angle_rate_smooth = angle_rate_smooth * 0.85 + raw_angle_rate * 0.15
+    speed_rate_smooth = speed_rate_smooth * 0.85 + raw_speed_rate * 0.15
 
-    # Combined throttle signal:
-    # Positive = angle growing OR speed increasing too fast (too much gas)
-    # Negative = angle shrinking OR speed dropping (not enough gas)
-    # Angle rate is primary, speed rate is secondary correction
-    # Speed rate scaled: losing 10 km/h per second is significant
-    throttle_signal = angle_rate_smooth + speed_rate_smooth * 2.0
+    throttle_signal = angle_rate_smooth + speed_rate_smooth * 4.0
 
     is_drifting = abs_angle > DRIFT_ANGLE_MIN
 
