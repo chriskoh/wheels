@@ -381,13 +381,23 @@ def draw_throttle_meter(active):
     needle_x = center_x + normalized * (bar_w / 2.0)
     needle_w = 4 * s
 
-    # Color based on whether needle is in the zone
-    if abs(normalized) < 0.1:
-        nr, ng, nb = 0.3, 1.0, 0.3  # green - in the zone
-    elif normalized < 0:
-        nr, ng, nb = 1.0, 0.5, 0.1  # orange - need more
+    # Color blends smoothly based on how far from center
+    abs_n = abs(normalized)
+    if abs_n < 0.1:
+        # In the zone — green
+        nr, ng, nb = 0.3, 1.0, 0.3
+    elif abs_n < 0.5:
+        # Blend green to yellow/orange
+        t = (abs_n - 0.1) / 0.4
+        nr = 0.3 + 0.7 * t
+        ng = 1.0 - 0.3 * t
+        nb = 0.3 * (1.0 - t)
     else:
-        nr, ng, nb = 1.0, 0.2, 0.2  # red - need less
+        # Blend orange to red
+        t = (abs_n - 0.5) / 0.5
+        nr = 1.0
+        ng = 0.7 * (1.0 - t)
+        nb = 0.1 * (1.0 - t)
 
     ac.glBegin(3)
     ac.glColor4f(nr, ng, nb, 0.95)
