@@ -16,10 +16,10 @@ prev_slip_angle = 0.0
 angle_rate_smooth = 0.0
 
 # Scale
-scale = 1.0
-SCALE_STEP = 0.1
-SCALE_MIN = 0.5
-SCALE_MAX = 3.0
+scale = 0.6
+SCALE_STEP = 0.05
+SCALE_MIN = 0.3
+SCALE_MAX = 1.5
 btn_increase = 0
 btn_decrease = 0
 
@@ -154,7 +154,7 @@ def draw_vertical_meter(active):
 
     # UP = too much, DOWN = not enough
     needle_y = center_y - normalized * (bar_h / 2.0)
-    needle_h = 14 * s
+    needle_h = 8 * s
 
     # Clamp to bar
     needle_y = max(bar_y + needle_h + 2, min(bar_y + bar_h - needle_h - 2, needle_y))
