@@ -292,7 +292,8 @@ def onFormRender(deltaT):
     prev_slip_angle = slip_angle
 
     # Smooth the rate so it doesn't jitter (exponential moving average)
-    angle_rate_smooth = angle_rate_smooth * 0.85 + raw_rate * 0.15
+    # Heavier smoothing to reduce twitchiness
+    angle_rate_smooth = angle_rate_smooth * 0.92 + raw_rate * 0.08
 
     # Draw the throttle meter bar (done in GL below)
     # Also update session stats
@@ -348,8 +349,8 @@ def draw_throttle_meter(active):
     ac.glVertex2f(bar_x, bar_y + bar_h)
     ac.glEnd()
 
-    # Green target zone in the center
-    zone_w = bar_w * 0.2
+    # Green target zone in the center (wider)
+    zone_w = bar_w * 0.35
     ac.glBegin(3)
     ac.glColor4f(0.1, 0.4, 0.1, 0.6)
     ac.glVertex2f(center_x - zone_w / 2, bar_y)
@@ -374,24 +375,25 @@ def draw_throttle_meter(active):
         return
 
     # Map angle_rate_smooth to position
-    clamped = max(-40.0, min(40.0, angle_rate_smooth))
-    normalized = clamped / 40.0
+    # Range: -80 to +80 deg/s (wider range = less sensitive)
+    clamped = max(-80.0, min(80.0, angle_rate_smooth))
+    normalized = clamped / 80.0
 
     # Needle position and size — MUCH wider now
     needle_x = center_x + normalized * (bar_w / 2.0)
     needle_w = 10 * s
 
-    # Smooth color gradient
+    # Smooth color gradient — wider green zone (0.2 = 20% of bar each side)
     abs_n = abs(normalized)
-    if abs_n < 0.1:
+    if abs_n < 0.2:
         nr, ng, nb = 0.3, 1.0, 0.3
-    elif abs_n < 0.5:
-        t = (abs_n - 0.1) / 0.4
+    elif abs_n < 0.55:
+        t = (abs_n - 0.2) / 0.35
         nr = 0.3 + 0.7 * t
         ng = 1.0 - 0.3 * t
         nb = 0.3 * (1.0 - t)
     else:
-        t = (abs_n - 0.5) / 0.5
+        t = (abs_n - 0.55) / 0.45
         nr = 1.0
         ng = 0.7 * (1.0 - t)
         nb = 0.1 * (1.0 - t)
