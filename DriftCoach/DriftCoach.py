@@ -331,7 +331,7 @@ def onFormRender(deltaT):
 
 
 def draw_throttle_meter(active):
-    """Draw a horizontal bar: center=good, left=more throttle, right=less throttle."""
+    """Draw a horizontal bar with a green target zone in the center."""
     s = scale
     bar_y = 182 * s
     bar_x = 10 * s
@@ -348,57 +348,54 @@ def draw_throttle_meter(active):
     ac.glVertex2f(bar_x, bar_y + bar_h)
     ac.glEnd()
 
-    # Center line (the sweet spot)
+    # Green target zone in the center (the range to aim for)
+    zone_w = bar_w * 0.2  # 20% of bar width
+    ac.glBegin(3)
+    ac.glColor4f(0.2, 0.6, 0.2, 0.4)
+    ac.glVertex2f(center_x - zone_w / 2, bar_y)
+    ac.glVertex2f(center_x + zone_w / 2, bar_y)
+    ac.glVertex2f(center_x + zone_w / 2, bar_y + bar_h)
+    ac.glVertex2f(center_x - zone_w / 2, bar_y + bar_h)
+    ac.glEnd()
+
+    # Zone border lines
     ac.glBegin(0)
-    ac.glColor4f(0.5, 0.5, 0.5, 0.8)
-    ac.glVertex2f(center_x, bar_y)
-    ac.glVertex2f(center_x, bar_y + bar_h)
+    ac.glColor4f(0.3, 0.8, 0.3, 0.6)
+    ac.glVertex2f(center_x - zone_w / 2, bar_y)
+    ac.glVertex2f(center_x - zone_w / 2, bar_y + bar_h)
+    ac.glEnd()
+    ac.glBegin(0)
+    ac.glColor4f(0.3, 0.8, 0.3, 0.6)
+    ac.glVertex2f(center_x + zone_w / 2, bar_y)
+    ac.glVertex2f(center_x + zone_w / 2, bar_y + bar_h)
     ac.glEnd()
 
     if not active:
         return
 
-    # Map angle_rate_smooth to bar position
-    # Negative rate = drift dying = bar goes LEFT (need more throttle)
-    # Positive rate = angle growing = bar goes RIGHT (need less throttle)
-    # Clamp to -40..+40 deg/s range for display
+    # Map angle_rate_smooth to position
     clamped = max(-40.0, min(40.0, angle_rate_smooth))
     normalized = clamped / 40.0  # -1 to +1
 
-    # Bar fill from center
-    fill_w = abs(normalized) * (bar_w / 2.0)
+    # Draw indicator needle
+    needle_x = center_x + normalized * (bar_w / 2.0)
+    needle_w = 4 * s
 
-    if normalized < -0.1:
-        # Drift dying — need MORE throttle — bar goes left, orange
-        r, g, b = 1.0, 0.5, 0.1
-        fill_x = center_x - fill_w
-        ac.glBegin(3)
-        ac.glColor4f(r, g, b, 0.85)
-        ac.glVertex2f(fill_x, bar_y + 1)
-        ac.glVertex2f(center_x, bar_y + 1)
-        ac.glVertex2f(center_x, bar_y + bar_h - 1)
-        ac.glVertex2f(fill_x, bar_y + bar_h - 1)
-        ac.glEnd()
-    elif normalized > 0.1:
-        # Angle growing — need LESS throttle — bar goes right, red
-        r, g, b = 1.0, 0.2, 0.2
-        ac.glBegin(3)
-        ac.glColor4f(r, g, b, 0.85)
-        ac.glVertex2f(center_x, bar_y + 1)
-        ac.glVertex2f(center_x + fill_w, bar_y + 1)
-        ac.glVertex2f(center_x + fill_w, bar_y + bar_h - 1)
-        ac.glVertex2f(center_x, bar_y + bar_h - 1)
-        ac.glEnd()
+    # Color based on whether needle is in the zone
+    if abs(normalized) < 0.1:
+        nr, ng, nb = 0.3, 1.0, 0.3  # green - in the zone
+    elif normalized < 0:
+        nr, ng, nb = 1.0, 0.5, 0.1  # orange - need more
     else:
-        # Sweet spot — small green bar in center
-        gw = 4 * s
-        ac.glBegin(3)
-        ac.glColor4f(0.3, 1.0, 0.3, 0.85)
-        ac.glVertex2f(center_x - gw, bar_y + 1)
-        ac.glVertex2f(center_x + gw, bar_y + 1)
-        ac.glVertex2f(center_x + gw, bar_y + bar_h - 1)
-        ac.glVertex2f(center_x - gw, bar_y + bar_h - 1)
-        ac.glEnd()
+        nr, ng, nb = 1.0, 0.2, 0.2  # red - need less
+
+    ac.glBegin(3)
+    ac.glColor4f(nr, ng, nb, 0.95)
+    ac.glVertex2f(needle_x - needle_w, bar_y + 1)
+    ac.glVertex2f(needle_x + needle_w, bar_y + 1)
+    ac.glVertex2f(needle_x + needle_w, bar_y + bar_h - 1)
+    ac.glVertex2f(needle_x - needle_w, bar_y + bar_h - 1)
+    ac.glEnd()
 
 
 def draw_angle_arc(slip_angle):
