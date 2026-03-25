@@ -108,8 +108,8 @@ def acMain(ac_version):
 
     # Throttle meter title (the bar is drawn in GL)
     throttle_title_label = ac.addLabel(appWindow, "THROTTLE")
-    ac.setPosition(throttle_title_label, 12, 205)
-    ac.setFontSize(throttle_title_label, 24)
+    ac.setPosition(throttle_title_label, 12, 225)
+    ac.setFontSize(throttle_title_label, 16)
     ac.setFontColor(throttle_title_label, 1.0, 1.0, 1.0, 1.0)
 
     stats_label = ac.addLabel(appWindow, "")
@@ -167,10 +167,14 @@ def apply_scale():
     ac.setFontSize(countersteer_label, int(18 * s))
     ac.setPosition(yaw_label, int(12 * s), int(165 * s))
     ac.setFontSize(yaw_label, int(18 * s))
-    ac.setPosition(throttle_title_label, int(12 * s), int(205 * s))
-    ac.setFontSize(throttle_title_label, int(24 * s))
+    ac.setPosition(throttle_title_label, int(12 * s), int(225 * s))
+    ac.setFontSize(throttle_title_label, int(16 * s))
     ac.setPosition(stats_label, int(12 * s), int(300 * s))
     ac.setFontSize(stats_label, int(14 * s))
+    ac.setPosition(throttle_more_label, int(12 * s), int(282 * s))
+    ac.setFontSize(throttle_more_label, int(11 * s))
+    ac.setPosition(throttle_less_label, int((BASE_WIDTH - 45) * s), int(282 * s))
+    ac.setFontSize(throttle_less_label, int(11 * s))
 
 
 def get_body_slip_angle(car):
@@ -411,9 +415,9 @@ def draw_throttle_meter(active):
     if not active:
         return
 
-    # Map angle_rate_smooth to position
-    clamped = max(-80.0, min(80.0, throttle_signal))
-    normalized = clamped / 80.0
+    # Map angle_rate_smooth to position (wide range = subtle, precise needle)
+    clamped = max(-800.0, min(800.0, throttle_signal))
+    normalized = clamped / 800.0
 
     # Needle position — very chunky
     needle_x = center_x + normalized * (bar_w / 2.0)
