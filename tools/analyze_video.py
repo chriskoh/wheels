@@ -145,7 +145,7 @@ def main():
     parser = argparse.ArgumentParser(description="Analyze DriftCoach HUD from gameplay video")
     parser.add_argument("video", help="Path to video file")
     parser.add_argument("--fps", type=int, default=2, help="Frames per second to extract (default: 2)")
-    parser.add_argument("--max-frames", type=int, default=30, help="Max frames to send to Claude (default: 30)")
+    parser.add_argument("--max-frames", type=int, default=60, help="Max frames to send to Claude (default: 60)")
     parser.add_argument("--output", default=None, help="Output file for analysis (default: print to console)")
     args = parser.parse_args()
 
