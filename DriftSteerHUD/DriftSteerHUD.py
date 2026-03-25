@@ -105,14 +105,10 @@ def onFormRender(deltaT):
     except Exception:
         tire_angle_deg = 0.0
 
-    # Tire temperatures
+    # Tire temperatures (returns 4D vector: FL, FR, RL, RR)
     fl_temp = fr_temp = rl_temp = rr_temp = 70.0
     try:
-        temps = ac.getCarState(car, acsys.CS.ThermalState)
-        fl_temp = temps[0]
-        fr_temp = temps[1]
-        rl_temp = temps[2]
-        rr_temp = temps[3]
+        fl_temp, fr_temp, rl_temp, rr_temp = ac.getCarState(car, acsys.CS.CurrentTyresCoreTemp)
     except Exception:
         pass
 
