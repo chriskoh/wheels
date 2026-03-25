@@ -1,0 +1,8 @@
+{
+  "name": "DriftSteerHUD",
+  "description": "Front tire steering angle visualization for drift practice",
+  "version": "1.0.0",
+  "author": "chriskoh",
+  "width": 200,
+  "height": 200
+}
