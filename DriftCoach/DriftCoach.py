@@ -48,7 +48,7 @@ def acMain(ac_version):
     ac.setSize(appWindow, APP_WIDTH, APP_HEIGHT)
     ac.setTitle(appWindow, "")
     ac.setIconPosition(appWindow, 0, -10000)
-    ac.setBackgroundOpacity(appWindow, 0.0)
+    ac.setBackgroundOpacity(appWindow, 0.7)
     ac.drawBorder(appWindow, 0)
 
     y = 5
@@ -175,7 +175,7 @@ def onFormRender(deltaT):
     global stats_spin_count, stats_drift_count
     global was_drifting, was_spinning
 
-    ac.setBackgroundOpacity(appWindow, 0.0)
+    ac.setBackgroundOpacity(appWindow, 0.7)
 
     car = ac.getFocusedCar()
 
