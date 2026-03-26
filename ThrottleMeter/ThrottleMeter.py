@@ -18,6 +18,7 @@ prev_speed = 0.0
 angle_rate_smooth = 0.0
 speed_rate_smooth = 0.0
 throttle_signal = 0.0
+prev_needle_pos = 0.0
 
 # Scale
 scale = 0.6
@@ -113,8 +114,8 @@ def onFormRender(deltaT):
     prev_slip_angle = slip_angle
     prev_speed = speed
 
-    angle_rate_smooth = angle_rate_smooth * 0.90 + raw_angle_rate * 0.10
-    speed_rate_smooth = speed_rate_smooth * 0.90 + raw_speed_rate * 0.10
+    angle_rate_smooth = angle_rate_smooth * 0.92 + raw_angle_rate * 0.08
+    speed_rate_smooth = speed_rate_smooth * 0.92 + raw_speed_rate * 0.08
 
     throttle_signal = angle_rate_smooth + speed_rate_smooth * 4.0
 
@@ -170,6 +171,14 @@ def draw_vertical_meter(active):
     # Map combined throttle signal to position
     clamped = max(-160.0, min(160.0, throttle_signal))
     normalized = clamped / 160.0
+
+    # Smooth needle movement per frame to prevent jitter
+    global prev_needle_pos
+    max_move = 0.03
+    delta = normalized - prev_needle_pos
+    if abs(delta) > max_move:
+        normalized = prev_needle_pos + max_move * (1.0 if delta > 0 else -1.0)
+    prev_needle_pos = normalized
 
     # UP = too much, DOWN = not enough
     needle_y = center_y - normalized * (bar_h / 2.0)

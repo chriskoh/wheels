@@ -315,8 +315,8 @@ def onFormRender(deltaT):
     prev_slip_angle = slip_angle
     prev_speed = speed
 
-    angle_rate_smooth = angle_rate_smooth * 0.80 + raw_angle_rate * 0.20
-    speed_rate_smooth = speed_rate_smooth * 0.80 + raw_speed_rate * 0.20
+    angle_rate_smooth = angle_rate_smooth * 0.92 + raw_angle_rate * 0.08
+    speed_rate_smooth = speed_rate_smooth * 0.92 + raw_speed_rate * 0.08
 
     # Combined signal:
     # Positive = too much gas (angle growing fast, speed climbing)
@@ -414,7 +414,7 @@ def draw_throttle_meter(active):
 
     # Smooth needle movement per frame to prevent jitter
     global prev_needle_pos
-    max_move = 0.06  # max normalized movement per frame
+    max_move = 0.03  # max normalized movement per frame
     delta = normalized - prev_needle_pos
     if abs(delta) > max_move:
         normalized = prev_needle_pos + max_move * (1.0 if delta > 0 else -1.0)
