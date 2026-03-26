@@ -20,10 +20,6 @@ TEMP_OPTIMAL_LOW = 75.0
 TEMP_OPTIMAL_HIGH = 100.0
 TEMP_HOT = 120.0
 
-# Car body dimensions
-CAR_BODY_W = 130
-CAR_BODY_H = 200
-
 scale = 1.0
 SCALE_STEP = 0.1
 SCALE_MIN = 0.5
@@ -160,34 +156,7 @@ def onFormRender(deltaT):
     car_cx = APP_WIDTH / 2.0
     car_cy = APP_HEIGHT / 2.0
 
-    # Car body outline (static, no rotation)
-    bw = CAR_BODY_W * s / 2.0
-    bh = CAR_BODY_H * s / 2.0
-    body_corners = [
-        (car_cx - bw, car_cy - bh),
-        (car_cx + bw, car_cy - bh),
-        (car_cx + bw, car_cy + bh),
-        (car_cx - bw, car_cy + bh),
-    ]
-
-    # Draw car body (semi-transparent fill)
-    ac.glBegin(3)
-    ac.glColor4f(0.2, 0.2, 0.2, 0.5)
-    for x, y in body_corners:
-        ac.glVertex2f(x, y)
-    ac.glEnd()
-
-    # Body outline
-    ac.glBegin(1)
-    ac.glColor4f(0.8, 0.8, 0.8, 0.6)
-    for i in range(4):
-        x1, y1 = body_corners[i]
-        x2, y2 = body_corners[(i + 1) % 4]
-        ac.glVertex2f(x1, y1)
-        ac.glVertex2f(x2, y2)
-    ac.glEnd()
-
-    # Wheel positions (static, no body rotation)
+    # Wheel positions
     spacing = 50 * s
     front_offset_y = -70 * s
     rear_offset_y = 70 * s

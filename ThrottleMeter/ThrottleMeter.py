@@ -125,6 +125,7 @@ def onFormRender(deltaT):
 
 
 def draw_vertical_meter(active):
+    """Vertical bar with 5 zones. Top to bottom: red (spin) | orange (extending) | green (stable) | cyan (tightening) | blue (grip-up)"""
     s = scale
     bar_x = 5 * s
     bar_y = 22 * s
@@ -141,29 +142,66 @@ def draw_vertical_meter(active):
     ac.glVertex2f(bar_x, bar_y + bar_h)
     ac.glEnd()
 
-    # Green target zone in center
-    zone_h = bar_h * 0.35
-    zone_top = center_y - zone_h / 2
-    zone_bot = center_y + zone_h / 2
+    # Zone boundaries (fraction of half-height from center)
+    # top: BLACK (spin) | orange (extending) | GREEN (stable) | cyan (tightening) | BLACK (dead) :bottom
+    green_frac = 0.175
+    mid_frac = 0.50
+
+    green_hh = bar_h * green_frac
+    mid_hh = bar_h * mid_frac
+
+    # Dark red zone (top — spin/dead)
     ac.glBegin(3)
-    ac.glColor4f(0.1, 0.4, 0.1, 0.6)
-    ac.glVertex2f(bar_x, zone_top)
-    ac.glVertex2f(bar_x + bar_w, zone_top)
-    ac.glVertex2f(bar_x + bar_w, zone_bot)
-    ac.glVertex2f(bar_x, zone_bot)
+    ac.glColor4f(0.3, 0.0, 0.0, 0.9)
+    ac.glVertex2f(bar_x, bar_y)
+    ac.glVertex2f(bar_x + bar_w, bar_y)
+    ac.glVertex2f(bar_x + bar_w, center_y - mid_hh)
+    ac.glVertex2f(bar_x, center_y - mid_hh)
     ac.glEnd()
 
-    # Zone borders
-    ac.glBegin(0)
-    ac.glColor4f(0.3, 1.0, 0.3, 0.8)
-    ac.glVertex2f(bar_x, zone_top)
-    ac.glVertex2f(bar_x + bar_w, zone_top)
+    # Orange zone (upper — extending)
+    ac.glBegin(3)
+    ac.glColor4f(0.5, 0.25, 0.0, 0.6)
+    ac.glVertex2f(bar_x, center_y - mid_hh)
+    ac.glVertex2f(bar_x + bar_w, center_y - mid_hh)
+    ac.glVertex2f(bar_x + bar_w, center_y - green_hh)
+    ac.glVertex2f(bar_x, center_y - green_hh)
     ac.glEnd()
-    ac.glBegin(0)
-    ac.glColor4f(0.3, 1.0, 0.3, 0.8)
-    ac.glVertex2f(bar_x, zone_bot)
-    ac.glVertex2f(bar_x + bar_w, zone_bot)
+
+    # Green zone (center — stable)
+    ac.glBegin(3)
+    ac.glColor4f(0.1, 0.4, 0.1, 0.6)
+    ac.glVertex2f(bar_x, center_y - green_hh)
+    ac.glVertex2f(bar_x + bar_w, center_y - green_hh)
+    ac.glVertex2f(bar_x + bar_w, center_y + green_hh)
+    ac.glVertex2f(bar_x, center_y + green_hh)
     ac.glEnd()
+
+    # Cyan zone (lower — tightening)
+    ac.glBegin(3)
+    ac.glColor4f(0.0, 0.3, 0.4, 0.6)
+    ac.glVertex2f(bar_x, center_y + green_hh)
+    ac.glVertex2f(bar_x + bar_w, center_y + green_hh)
+    ac.glVertex2f(bar_x + bar_w, center_y + mid_hh)
+    ac.glVertex2f(bar_x, center_y + mid_hh)
+    ac.glEnd()
+
+    # Dark red zone (bottom — grip-up/dead)
+    ac.glBegin(3)
+    ac.glColor4f(0.3, 0.0, 0.0, 0.9)
+    ac.glVertex2f(bar_x, center_y + mid_hh)
+    ac.glVertex2f(bar_x + bar_w, center_y + mid_hh)
+    ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
+    ac.glVertex2f(bar_x, bar_y + bar_h)
+    ac.glEnd()
+
+    # Zone border lines
+    for by in [center_y - mid_hh, center_y - green_hh, center_y + green_hh, center_y + mid_hh]:
+        ac.glBegin(0)
+        ac.glColor4f(0.5, 0.5, 0.5, 0.4)
+        ac.glVertex2f(bar_x, by)
+        ac.glVertex2f(bar_x + bar_w, by)
+        ac.glEnd()
 
     if not active:
         return
@@ -187,20 +225,17 @@ def draw_vertical_meter(active):
     # Clamp to bar
     needle_y = max(bar_y + needle_h + 2, min(bar_y + bar_h - needle_h - 2, needle_y))
 
-    # Color gradient
+    # Needle color matches zone
     abs_n = abs(normalized)
-    if abs_n < 0.2:
-        nr, ng, nb = 0.3, 1.0, 0.3
-    elif abs_n < 0.55:
-        t = (abs_n - 0.2) / 0.35
-        nr = 0.3 + 0.7 * t
-        ng = 1.0 - 0.3 * t
-        nb = 0.3 * (1.0 - t)
+    if abs_n < green_frac:
+        nr, ng, nb = 0.3, 1.0, 0.3       # green
+    elif abs_n < mid_frac:
+        if normalized > 0:
+            nr, ng, nb = 1.0, 0.6, 0.0    # orange (extending, up)
+        else:
+            nr, ng, nb = 0.0, 0.8, 0.9    # cyan (tightening, down)
     else:
-        t = min(1.0, (abs_n - 0.55) / 0.45)
-        nr = 1.0
-        ng = 0.7 * (1.0 - t)
-        nb = 0.1 * (1.0 - t)
+        nr, ng, nb = 1.0, 0.1, 0.1        # red (danger, either side)
 
     # White outline
     ac.glBegin(3)
