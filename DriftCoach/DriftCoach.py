@@ -268,30 +268,21 @@ def onFormRender(deltaT):
     ac.setText(state_label, state_names[drift_state])
 
     # === COUNTER-STEER ===
-    # During a drift, you counter-steer: wheels point into the slide direction.
-    # We check if steer opposes the slip angle sign (try both conventions).
-    # Also detect if ANY significant steer is happening in the right direction.
+    # Counter steering = turning INTO the slide to catch it.
+    # In AC, slip and steer share the same sign when counter steering:
+    #   slide right (positive slip) -> steer right (positive steer) = counter steer
+    abs_steer = abs(steer)
     if is_drifting and abs_angle > DRIFT_ANGLE_MIN:
-        # Try: counter-steer = steer sign OPPOSITE to slip sign
-        # (if car slides right/positive, you steer left/negative to catch it)
-        same_sign = (slip_angle > 0 and steer > 0) or (slip_angle < 0 and steer < 0)
-        opp_sign = (slip_angle > 0 and steer < 0) or (slip_angle < 0 and steer > 0)
-
-        abs_steer = abs(steer)
-        # If steer is significant (more than 10 degrees)
-        if abs_steer > 10:
-            # We don't know the sign convention yet, so check both
-            # The correct one is whichever makes the car NOT spin
-            # Heuristic: if angle is stable or decreasing with this steer, it's counter
-            if same_sign or opp_sign:
-                ac.setText(countersteer_label, "COUNTER: {:.0f}".format(abs_steer))
-                ac.setFontColor(countersteer_label, 0.3, 1.0, 0.3, 1.0)
-            else:
-                ac.setText(countersteer_label, "NO COUNTER")
-                ac.setFontColor(countersteer_label, 1.0, 0.2, 0.2, 1.0)
+        is_counter = (slip_angle > 0 and steer > 0) or (slip_angle < 0 and steer < 0)
+        if abs_steer > 10 and is_counter:
+            ac.setText(countersteer_label, ">> COUNTER {:.0f} <<".format(abs_steer))
+            ac.setFontColor(countersteer_label, 0.3, 1.0, 0.3, 1.0)
+        elif abs_steer > 10:
+            ac.setText(countersteer_label, "WRONG WAY")
+            ac.setFontColor(countersteer_label, 1.0, 0.2, 0.2, 1.0)
         else:
             ac.setText(countersteer_label, "NO COUNTER")
-            ac.setFontColor(countersteer_label, 1.0, 0.2, 0.2, 1.0)
+            ac.setFontColor(countersteer_label, 1.0, 0.5, 0.1, 1.0)
     else:
         ac.setText(countersteer_label, "STEER: ---")
         ac.setFontColor(countersteer_label, 0.6, 0.6, 0.6, 1.0)

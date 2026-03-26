@@ -123,7 +123,7 @@ def get_body_slip_angle(car):
         lvz = lv[2]  # forward
         if abs(lvz) < 0.5:
             return 0.0
-        return -math.degrees(math.atan2(lvx, abs(lvz)))
+        return math.degrees(math.atan2(lvx, abs(lvz)))
     except Exception:
         return 0.0
 
@@ -219,6 +219,31 @@ def onFormRender(deltaT):
     rr_cx, rr_cy = car_cx + spacing, car_cy + rear_offset_y
     rr_cx, rr_cy = rotate_point(rr_cx, rr_cy, body_rad, car_cx, car_cy)
     draw_tire(rr_cx, rr_cy, body_rad, tw, th, rr_temp)
+
+    # --- Travel direction lines (fixed vertical = road direction) ---
+    # These stay straight while the car rotates, showing the drift angle.
+    line_offset_x = bw + 12 * s  # just outside the car body
+    line_half_h = bh + 10 * s
+
+    # Cyan when drifting, dim grey when straight — always visible
+    if abs(slip_smooth) > 3.0:
+        lr, lg, lb, la = 0.0, 0.9, 1.0, 0.9
+    else:
+        lr, lg, lb, la = 0.6, 0.6, 0.6, 0.5
+
+    # Left travel line (separate draw call to avoid diagonal)
+    ac.glBegin(1)
+    ac.glColor4f(lr, lg, lb, la)
+    ac.glVertex2f(car_cx - line_offset_x, car_cy - line_half_h)
+    ac.glVertex2f(car_cx - line_offset_x, car_cy + line_half_h)
+    ac.glEnd()
+
+    # Right travel line
+    ac.glBegin(1)
+    ac.glColor4f(lr, lg, lb, la)
+    ac.glVertex2f(car_cx + line_offset_x, car_cy - line_half_h)
+    ac.glVertex2f(car_cx + line_offset_x, car_cy + line_half_h)
+    ac.glEnd()
 
 
 def draw_tire(cx, cy, angle_rad, tw, th, temp):
