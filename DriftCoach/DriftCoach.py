@@ -272,7 +272,8 @@ def onFormRender(deltaT):
     # In AC, slip and steer share the same sign when counter steering:
     #   slide right (positive slip) -> steer right (positive steer) = counter steer
     abs_steer = abs(steer)
-    if is_drifting and abs_angle > DRIFT_ANGLE_MIN:
+    actually_drifting = drift_state == SUSTAINING and abs_angle > DRIFT_ANGLE_INITIATE
+    if actually_drifting:
         is_counter = (slip_angle > 0 and steer < 0) or (slip_angle < 0 and steer > 0)
         if abs_steer > 10 and is_counter:
             ac.setText(countersteer_label, ">> COUNTER {:.0f} <<".format(abs_steer))
