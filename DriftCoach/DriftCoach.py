@@ -273,7 +273,7 @@ def onFormRender(deltaT):
     #   slide right (positive slip) -> steer right (positive steer) = counter steer
     abs_steer = abs(steer)
     if is_drifting and abs_angle > DRIFT_ANGLE_MIN:
-        is_counter = (slip_angle > 0 and steer > 0) or (slip_angle < 0 and steer < 0)
+        is_counter = (slip_angle > 0 and steer < 0) or (slip_angle < 0 and steer > 0)
         if abs_steer > 10 and is_counter:
             ac.setText(countersteer_label, ">> COUNTER {:.0f} <<".format(abs_steer))
             ac.setFontColor(countersteer_label, 0.3, 1.0, 0.3, 1.0)
