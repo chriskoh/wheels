@@ -19,6 +19,11 @@ SCALE_MAX = 3.0
 btn_increase = 0
 btn_decrease = 0
 
+# Smoothing
+prev_slip_angle = 0.0
+angle_rate_smooth = 0.0
+stable_steer = 0.0
+
 
 def acMain(ac_version):
     global appWindow, btn_increase, btn_decrease
@@ -45,7 +50,6 @@ def acMain(ac_version):
 
 def acUpdate(deltaT):
     pass
-
 
 def onIncrease(*args):
     global scale
@@ -141,10 +145,13 @@ def steer_to_display(steer_wheel_deg):
 
 
 def onFormRender(deltaT):
+    global prev_slip_angle, angle_rate_smooth, stable_steer
+
     ac.setBackgroundOpacity(appWindow, 0.0)
     car = ac.getFocusedCar()
     slip_angle = get_body_slip_angle(car)
     abs_angle = abs(slip_angle)
+
     steer = 0.0
     gas = 0.0
     speed = 0.0
@@ -161,14 +168,30 @@ def onFormRender(deltaT):
     except Exception:
         pass
 
+    # Track angle rate of change
+    if deltaT > 0:
+        raw_rate = (abs_angle - abs(prev_slip_angle)) / deltaT
+    else:
+        raw_rate = 0.0
+    prev_slip_angle = slip_angle
+    angle_rate_smooth = angle_rate_smooth * 0.90 + raw_rate * 0.10
+
     is_drifting = abs_angle > DRIFT_ANGLE_MIN
+
+    # When drift is stable (angle not changing much), track the steer position
+    # This becomes our "known good" reference point
+    if is_drifting and abs(angle_rate_smooth) < 5.0:
+        stable_steer = stable_steer * 0.95 + steer * 0.05
+    elif not is_drifting:
+        stable_steer = 0.0
+
     s = scale
     cx = APP_WIDTH / 2.0
     cy = APP_HEIGHT / 2.0
     wheel_r = 70.0 * s
     band_w = 12.0 * s
 
-    # Draw steering wheel (rotates with input)
+    # Draw steering wheel
     steer_display = max(-180.0, min(180.0, steer))
     steer_rad = math.radians(steer_display)
     draw_steering_wheel(cx, cy, wheel_r, steer_rad, s)
@@ -181,23 +204,24 @@ def onFormRender(deltaT):
     if not is_drifting:
         return
 
-    # Safe steering zone — computed in tire angle space
-    max_tire_angle = MAX_STEER_LOCK / STEERING_RATIO
-    ideal_tire = -slip_angle
-    ideal_tire = max(-max_tire_angle, min(max_tire_angle, ideal_tire))
+    # Zone centers on the "stable" steer position
+    # When angle is growing (positive rate), zone shifts toward more counter-steer
+    # When angle is shrinking (negative rate), zone shifts toward less
+    # This tells the driver: "you were good HERE, adjust THIS much"
+    rate_shift = angle_rate_smooth * 1.5  # deg/s -> steering wheel shift
+    zone_center = stable_steer - rate_shift
 
-    # Zone width in tire degrees
-    base_width = 6.0
-    speed_factor = max(0.4, 1.0 - (speed - 40.0) * 0.004)
-    throttle_factor = max(0.5, 1.0 - (gas - 0.3) * 0.5)
+    # Zone width narrows with speed and throttle
+    base_width = 40.0  # degrees of steering wheel
+    speed_factor = max(0.5, 1.0 - (speed - 40.0) * 0.003)
+    throttle_factor = max(0.5, 1.0 - (gas - 0.3) * 0.4)
     zone_half = (base_width * speed_factor * throttle_factor) / 2.0
 
-    zone_lo_tire = ideal_tire - zone_half
-    zone_hi_tire = ideal_tire + zone_half
+    zone_lo = zone_center - zone_half
+    zone_hi = zone_center + zone_half
 
-    # Convert to steering wheel degrees then to display
-    zone_lo_deg = steer_to_display(zone_lo_tire * STEERING_RATIO)
-    zone_hi_deg = steer_to_display(zone_hi_tire * STEERING_RATIO)
+    zone_lo_deg = steer_to_display(zone_lo)
+    zone_hi_deg = steer_to_display(zone_hi)
 
     arc_start = min(zone_lo_deg, zone_hi_deg)
     arc_end = max(zone_lo_deg, zone_hi_deg)
