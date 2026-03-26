@@ -165,7 +165,8 @@ def onFormRender(deltaT):
     car_cy = APP_HEIGHT / 2.0
 
     # Body slip rotation (the whole car rotates)
-    body_rad = math.radians(slip_smooth)
+    # Negate so the car visual rotates in the correct direction relative to travel
+    body_rad = -math.radians(slip_smooth)
 
     # Car body outline
     bw = CAR_BODY_W * s / 2.0
