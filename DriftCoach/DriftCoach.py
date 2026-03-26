@@ -365,7 +365,7 @@ def onFormRender(deltaT):
 
 def draw_throttle_meter(active):
     """Draw a horizontal bar with 5 zones and a thick visible needle.
-    Left to right: blue (grip-up) | cyan (tightening) | green (stable) | orange (extending) | red (spin)
+    Left to right: dark red (dead) | cyan (tightening) | green (stable) | orange (extending) | dark red (spin)
     """
     s = scale
     bar_y = 250 * s
@@ -374,26 +374,16 @@ def draw_throttle_meter(active):
     bar_h = 30 * s
     center_x = bar_x + bar_w / 2.0
 
-    # Background bar
-    ac.glBegin(3)
-    ac.glColor4f(0.1, 0.1, 0.1, 0.85)
-    ac.glVertex2f(bar_x, bar_y)
-    ac.glVertex2f(bar_x + bar_w, bar_y)
-    ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
-    ac.glVertex2f(bar_x, bar_y + bar_h)
-    ac.glEnd()
-
     # Zone boundaries (fraction of half-width from center)
-    # |--BLACK--|--cyan--|--green--|--orange--|--BLACK--|
     green_frac = 0.175
     mid_frac = 0.50
 
     green_hw = bar_w * green_frac
     mid_hw = bar_w * mid_frac
 
-    # Dark red zone (far left — grip-up/dead)
+    # Red zone (far left — grip-up/dead)
     ac.glBegin(3)
-    ac.glColor4f(0.3, 0.0, 0.0, 0.9)
+    ac.glColor4f(0.6, 0.05, 0.05, 1.0)
     ac.glVertex2f(bar_x, bar_y)
     ac.glVertex2f(center_x - mid_hw, bar_y)
     ac.glVertex2f(center_x - mid_hw, bar_y + bar_h)
@@ -402,7 +392,7 @@ def draw_throttle_meter(active):
 
     # Cyan zone (left — tightening)
     ac.glBegin(3)
-    ac.glColor4f(0.0, 0.3, 0.4, 0.6)
+    ac.glColor4f(0.0, 0.3, 0.4, 1.0)
     ac.glVertex2f(center_x - mid_hw, bar_y)
     ac.glVertex2f(center_x - green_hw, bar_y)
     ac.glVertex2f(center_x - green_hw, bar_y + bar_h)
@@ -411,7 +401,7 @@ def draw_throttle_meter(active):
 
     # Green zone (center — stable)
     ac.glBegin(3)
-    ac.glColor4f(0.1, 0.4, 0.1, 0.6)
+    ac.glColor4f(0.1, 0.4, 0.1, 1.0)
     ac.glVertex2f(center_x - green_hw, bar_y)
     ac.glVertex2f(center_x + green_hw, bar_y)
     ac.glVertex2f(center_x + green_hw, bar_y + bar_h)
@@ -420,16 +410,16 @@ def draw_throttle_meter(active):
 
     # Orange zone (right — extending)
     ac.glBegin(3)
-    ac.glColor4f(0.5, 0.25, 0.0, 0.6)
+    ac.glColor4f(0.5, 0.25, 0.0, 1.0)
     ac.glVertex2f(center_x + green_hw, bar_y)
     ac.glVertex2f(center_x + mid_hw, bar_y)
     ac.glVertex2f(center_x + mid_hw, bar_y + bar_h)
     ac.glVertex2f(center_x + green_hw, bar_y + bar_h)
     ac.glEnd()
 
-    # Dark red zone (far right — spin/dead)
+    # Red zone (far right — spin/dead)
     ac.glBegin(3)
-    ac.glColor4f(0.3, 0.0, 0.0, 0.9)
+    ac.glColor4f(0.6, 0.05, 0.05, 1.0)
     ac.glVertex2f(center_x + mid_hw, bar_y)
     ac.glVertex2f(bar_x + bar_w, bar_y)
     ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)

@@ -21,10 +21,10 @@ throttle_signal = 0.0
 prev_needle_pos = 0.0
 
 # Scale
-scale = 0.6
+scale = 2.4
 SCALE_STEP = 0.05
 SCALE_MIN = 0.3
-SCALE_MAX = 1.5
+SCALE_MAX = 4.0
 btn_increase = 0
 btn_decrease = 0
 
@@ -133,26 +133,17 @@ def draw_vertical_meter(active):
     bar_h = (APP_HEIGHT - 30) * s
     center_y = bar_y + bar_h / 2.0
 
-    # Background
-    ac.glBegin(3)
-    ac.glColor4f(0.1, 0.1, 0.1, 0.85)
-    ac.glVertex2f(bar_x, bar_y)
-    ac.glVertex2f(bar_x + bar_w, bar_y)
-    ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
-    ac.glVertex2f(bar_x, bar_y + bar_h)
-    ac.glEnd()
-
     # Zone boundaries (fraction of half-height from center)
-    # top: BLACK (spin) | orange (extending) | GREEN (stable) | cyan (tightening) | BLACK (dead) :bottom
+    # top: DARK RED (spin) | orange (extending) | GREEN (stable) | cyan (tightening) | DARK RED (dead) :bottom
     green_frac = 0.175
     mid_frac = 0.50
 
     green_hh = bar_h * green_frac
     mid_hh = bar_h * mid_frac
 
-    # Dark red zone (top — spin/dead)
+    # Red zone (top — spin/dead)
     ac.glBegin(3)
-    ac.glColor4f(0.3, 0.0, 0.0, 0.9)
+    ac.glColor4f(0.6, 0.05, 0.05, 1.0)
     ac.glVertex2f(bar_x, bar_y)
     ac.glVertex2f(bar_x + bar_w, bar_y)
     ac.glVertex2f(bar_x + bar_w, center_y - mid_hh)
@@ -161,7 +152,7 @@ def draw_vertical_meter(active):
 
     # Orange zone (upper — extending)
     ac.glBegin(3)
-    ac.glColor4f(0.5, 0.25, 0.0, 0.6)
+    ac.glColor4f(0.5, 0.25, 0.0, 1.0)
     ac.glVertex2f(bar_x, center_y - mid_hh)
     ac.glVertex2f(bar_x + bar_w, center_y - mid_hh)
     ac.glVertex2f(bar_x + bar_w, center_y - green_hh)
@@ -170,7 +161,7 @@ def draw_vertical_meter(active):
 
     # Green zone (center — stable)
     ac.glBegin(3)
-    ac.glColor4f(0.1, 0.4, 0.1, 0.6)
+    ac.glColor4f(0.1, 0.4, 0.1, 1.0)
     ac.glVertex2f(bar_x, center_y - green_hh)
     ac.glVertex2f(bar_x + bar_w, center_y - green_hh)
     ac.glVertex2f(bar_x + bar_w, center_y + green_hh)
@@ -179,16 +170,16 @@ def draw_vertical_meter(active):
 
     # Cyan zone (lower — tightening)
     ac.glBegin(3)
-    ac.glColor4f(0.0, 0.3, 0.4, 0.6)
+    ac.glColor4f(0.0, 0.3, 0.4, 1.0)
     ac.glVertex2f(bar_x, center_y + green_hh)
     ac.glVertex2f(bar_x + bar_w, center_y + green_hh)
     ac.glVertex2f(bar_x + bar_w, center_y + mid_hh)
     ac.glVertex2f(bar_x, center_y + mid_hh)
     ac.glEnd()
 
-    # Dark red zone (bottom — grip-up/dead)
+    # Red zone (bottom — grip-up/dead)
     ac.glBegin(3)
-    ac.glColor4f(0.3, 0.0, 0.0, 0.9)
+    ac.glColor4f(0.6, 0.05, 0.05, 1.0)
     ac.glVertex2f(bar_x, center_y + mid_hh)
     ac.glVertex2f(bar_x + bar_w, center_y + mid_hh)
     ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
