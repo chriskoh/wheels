@@ -22,7 +22,6 @@ btn_decrease = 0
 # Smoothing
 prev_slip_angle = 0.0
 angle_rate_smooth = 0.0
-stable_steer = 0.0
 
 
 def acMain(ac_version):
@@ -145,7 +144,7 @@ def steer_to_display(steer_wheel_deg):
 
 
 def onFormRender(deltaT):
-    global prev_slip_angle, angle_rate_smooth, stable_steer
+    global prev_slip_angle, angle_rate_smooth
 
     ac.setBackgroundOpacity(appWindow, 0.0)
     car = ac.getFocusedCar()
@@ -153,87 +152,91 @@ def onFormRender(deltaT):
     abs_angle = abs(slip_angle)
 
     steer = 0.0
-    gas = 0.0
-    speed = 0.0
     try:
         steer = ac.getCarState(car, acsys.CS.Steer)
     except Exception:
         pass
-    try:
-        gas = ac.getCarState(car, acsys.CS.Gas)
-    except Exception:
-        pass
-    try:
-        speed = ac.getCarState(car, acsys.CS.SpeedKMH)
-    except Exception:
-        pass
 
-    # Track angle rate of change
+    # Track angle rate (using signed slip so we know direction)
     if deltaT > 0:
-        raw_rate = (abs_angle - abs(prev_slip_angle)) / deltaT
+        raw_rate = (slip_angle - prev_slip_angle) / deltaT
     else:
         raw_rate = 0.0
     prev_slip_angle = slip_angle
-    angle_rate_smooth = angle_rate_smooth * 0.90 + raw_rate * 0.10
+    angle_rate_smooth = angle_rate_smooth * 0.88 + raw_rate * 0.12
 
     is_drifting = abs_angle > DRIFT_ANGLE_MIN
-
-    # When drift is stable (angle not changing much), track the steer position
-    # This becomes our "known good" reference point
-    if is_drifting and abs(angle_rate_smooth) < 5.0:
-        stable_steer = stable_steer * 0.95 + steer * 0.05
-    elif not is_drifting:
-        stable_steer = 0.0
 
     s = scale
     cx = APP_WIDTH / 2.0
     cy = APP_HEIGHT / 2.0
     wheel_r = 70.0 * s
-    band_w = 12.0 * s
+    band_w = 14.0 * s
 
     # Draw steering wheel
     steer_display = max(-180.0, min(180.0, steer))
     steer_rad = math.radians(steer_display)
     draw_steering_wheel(cx, cy, wheel_r, steer_rad, s)
 
-    # Current steer needle
-    current_deg = steer_to_display(steer)
-    draw_needle(cx, cy, wheel_r - band_w - 4 * s, wheel_r + 6 * s,
-                current_deg, 1.0, 1.0, 1.0, 1.0, 3.0 * s)
-
     if not is_drifting:
         return
 
-    # Zone centers on the "stable" steer position
-    # When angle is growing (positive rate), zone shifts toward more counter-steer
-    # When angle is shrinking (negative rate), zone shifts toward less
-    # This tells the driver: "you were good HERE, adjust THIS much"
-    rate_shift = angle_rate_smooth * 1.5  # deg/s -> steering wheel shift
-    zone_center = stable_steer - rate_shift
+    # Determine which direction to steer based on what the drift is doing.
+    #
+    # angle_rate_smooth: positive = slip angle growing positive (nose going more left)
+    #                    negative = slip angle growing negative (nose going more right)
+    #
+    # If slip_angle > 0 (nose left of travel = drifting left):
+    #   angle_rate > 0 = drift opening  -> need more RIGHT steer (counter-steer) to catch
+    #   angle_rate < 0 = drift tightening -> could steer more LEFT to open it
+    #
+    # If slip_angle < 0 (nose right of travel = drifting right):
+    #   angle_rate < 0 = drift opening  -> need more LEFT steer (counter-steer) to catch
+    #   angle_rate > 0 = drift tightening -> could steer more RIGHT to open it
+    #
+    # Simplification: the sign of angle_rate tells us which way the nose is moving.
+    # Positive rate = nose moving left = steer RIGHT to counter.
+    # Negative rate = nose moving right = steer LEFT to counter.
+    #
+    # So: direction to steer = opposite sign of angle_rate
+    # On the display: positive steer = right = clockwise on screen
 
-    # Zone width narrows with speed and throttle
-    base_width = 40.0  # degrees of steering wheel
-    speed_factor = max(0.5, 1.0 - (speed - 40.0) * 0.003)
-    throttle_factor = max(0.5, 1.0 - (gas - 0.3) * 0.4)
-    zone_half = (base_width * speed_factor * throttle_factor) / 2.0
+    # How urgent is the correction? Map rate magnitude to arc size
+    rate_magnitude = abs(angle_rate_smooth)
 
-    zone_lo = zone_center - zone_half
-    zone_hi = zone_center + zone_half
+    # Dead zone: if rate is small, drift is stable -> show green center
+    if rate_magnitude < 3.0:
+        # Stable - show small green arc at top (12 o'clock)
+        draw_arc_filled(cx, cy, wheel_r - band_w, wheel_r,
+                        -100, -80, 8, 0.1, 0.6, 0.1, 0.6)
+        return
 
-    zone_lo_deg = steer_to_display(zone_lo)
-    zone_hi_deg = steer_to_display(zone_hi)
+    # Map rate to arc sweep (bigger rate = bigger/brighter indicator)
+    sweep = min(60.0, rate_magnitude * 2.0)  # max 60 degrees of arc
+    intensity = min(1.0, rate_magnitude / 30.0)
 
-    arc_start = min(zone_lo_deg, zone_hi_deg)
-    arc_end = max(zone_lo_deg, zone_hi_deg)
+    # Direction: steer opposite to angle_rate to counter
+    # angle_rate > 0 -> nose going left -> steer right -> positive on display
+    # On display: -90 = top, 0 = right, -180 = left
+    if angle_rate_smooth > 0:
+        # Need to steer RIGHT -> show arc on the right side
+        arc_start = -90.0
+        arc_end = -90.0 + sweep
+        r, g, b = 1.0 * intensity, 0.5 * (1.0 - intensity), 0.0
+    else:
+        # Need to steer LEFT -> show arc on the left side
+        arc_start = -90.0 - sweep
+        arc_end = -90.0
+        r, g, b = 1.0 * intensity, 0.5 * (1.0 - intensity), 0.0
 
-    # Green safe zone arc
+    # Draw the directional indicator arc
     draw_arc_filled(cx, cy, wheel_r - band_w, wheel_r,
-                    arc_start, arc_end, 24, 0.1, 0.6, 0.1, 0.5)
-    draw_needle(cx, cy, wheel_r - band_w - 2 * s, wheel_r + 2 * s,
-                arc_start, 0.3, 1.0, 0.3, 0.6, 2.0 * s)
-    draw_needle(cx, cy, wheel_r - band_w - 2 * s, wheel_r + 2 * s,
-                arc_end, 0.3, 1.0, 0.3, 0.6, 2.0 * s)
+                    arc_start, arc_end, 16, r, g, b, 0.7)
 
-    # Redraw steer needle on top
-    draw_needle(cx, cy, wheel_r - band_w - 4 * s, wheel_r + 6 * s,
-                current_deg, 1.0, 1.0, 1.0, 1.0, 3.0 * s)
+    # Arrow tip at the leading edge
+    if angle_rate_smooth > 0:
+        tip_deg = arc_end
+    else:
+        tip_deg = arc_start
+    draw_needle(cx, cy, wheel_r - band_w - 4 * s, wheel_r + 4 * s,
+                tip_deg, r, g, b, 1.0, 4.0 * s)
