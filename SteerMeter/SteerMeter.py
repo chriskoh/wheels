@@ -5,23 +5,18 @@ import math
 app = "SteerMeter"
 appWindow = 0
 
-APP_WIDTH = 30
-APP_HEIGHT = 400
+APP_WIDTH = 200
+APP_HEIGHT = 200
 
 # Drift detection
 DRIFT_ANGLE_MIN = 5.0
 STEERING_RATIO = 14.0
 
-# Smoothing
-steer_signal = 0.0
-prev_needle_pos = 0.0
-signal_smooth = 0.0
-
 # Scale
-scale = 1.8
-SCALE_STEP = 0.05
-SCALE_MIN = 0.3
-SCALE_MAX = 4.0
+scale = 1.0
+SCALE_STEP = 0.1
+SCALE_MIN = 0.5
+SCALE_MAX = 3.0
 btn_increase = 0
 btn_decrease = 0
 
@@ -37,15 +32,15 @@ def acMain(ac_version):
     ac.drawBorder(appWindow, 0)
 
     btn_decrease = ac.addButton(appWindow, "-")
-    ac.setSize(btn_decrease, 16, 16)
+    ac.setSize(btn_decrease, 20, 20)
     ac.setPosition(btn_decrease, 2, 2)
-    ac.setFontSize(btn_decrease, 12)
+    ac.setFontSize(btn_decrease, 14)
     ac.addOnClickedListener(btn_decrease, onDecrease)
 
     btn_increase = ac.addButton(appWindow, "+")
-    ac.setSize(btn_increase, 16, 16)
-    ac.setPosition(btn_increase, 20, 2)
-    ac.setFontSize(btn_increase, 12)
+    ac.setSize(btn_increase, 20, 20)
+    ac.setPosition(btn_increase, 24, 2)
+    ac.setFontSize(btn_increase, 14)
     ac.addOnClickedListener(btn_increase, onIncrease)
 
     ac.addRenderCallback(appWindow, onFormRender)
@@ -80,9 +75,72 @@ def get_body_slip_angle(car):
         return 0.0
 
 
-def onFormRender(deltaT):
-    global steer_signal, prev_needle_pos, signal_smooth
+def draw_arc(cx, cy, radius, start_deg, end_deg, steps, r, g, b, a):
+    """Draw an arc as a line strip."""
+    if abs(end_deg - start_deg) < 0.5:
+        return
+    ac.glBegin(1)
+    ac.glColor4f(r, g, b, a)
+    for i in range(steps + 1):
+        t = float(i) / steps
+        angle = math.radians(start_deg + t * (end_deg - start_deg))
+        x = cx + radius * math.cos(angle)
+        y = cy + radius * math.sin(angle)
+        ac.glVertex2f(x, y)
+    ac.glEnd()
 
+
+def draw_arc_filled(cx, cy, r_inner, r_outer, start_deg, end_deg, steps, r, g, b, a):
+    """Draw a filled arc band using quads between inner and outer radius."""
+    if abs(end_deg - start_deg) < 0.5:
+        return
+    for i in range(steps):
+        t0 = float(i) / steps
+        t1 = float(i + 1) / steps
+        a0 = math.radians(start_deg + t0 * (end_deg - start_deg))
+        a1 = math.radians(start_deg + t1 * (end_deg - start_deg))
+
+        ix0 = cx + r_inner * math.cos(a0)
+        iy0 = cy + r_inner * math.sin(a0)
+        ox0 = cx + r_outer * math.cos(a0)
+        oy0 = cy + r_outer * math.sin(a0)
+        ix1 = cx + r_inner * math.cos(a1)
+        iy1 = cy + r_inner * math.sin(a1)
+        ox1 = cx + r_outer * math.cos(a1)
+        oy1 = cy + r_outer * math.sin(a1)
+
+        ac.glBegin(3)
+        ac.glColor4f(r, g, b, a)
+        ac.glVertex2f(ix0, iy0)
+        ac.glVertex2f(ox0, oy0)
+        ac.glVertex2f(ox1, oy1)
+        ac.glVertex2f(ix1, iy1)
+        ac.glEnd()
+
+
+def draw_needle(cx, cy, r_inner, r_outer, angle_deg, r, g, b, a, width=3.0):
+    """Draw a radial needle line at a given angle."""
+    rad = math.radians(angle_deg)
+    x0 = cx + r_inner * math.cos(rad)
+    y0 = cy + r_inner * math.sin(rad)
+    x1 = cx + r_outer * math.cos(rad)
+    y1 = cy + r_outer * math.sin(rad)
+
+    # Draw as a thin quad for visibility
+    hw = width / 2.0
+    perp_x = -math.sin(rad) * hw
+    perp_y = math.cos(rad) * hw
+
+    ac.glBegin(3)
+    ac.glColor4f(r, g, b, a)
+    ac.glVertex2f(x0 - perp_x, y0 - perp_y)
+    ac.glVertex2f(x0 + perp_x, y0 + perp_y)
+    ac.glVertex2f(x1 + perp_x, y1 + perp_y)
+    ac.glVertex2f(x1 - perp_x, y1 - perp_y)
+    ac.glEnd()
+
+
+def onFormRender(deltaT):
     ac.setBackgroundOpacity(appWindow, 0.0)
 
     car = ac.getFocusedCar()
@@ -91,6 +149,7 @@ def onFormRender(deltaT):
 
     steer = 0.0
     gas = 0.0
+    speed = 0.0
     try:
         steer = ac.getCarState(car, acsys.CS.Steer)
     except Exception:
@@ -99,112 +158,75 @@ def onFormRender(deltaT):
         gas = ac.getCarState(car, acsys.CS.Gas)
     except Exception:
         pass
+    try:
+        speed = ac.getCarState(car, acsys.CS.SpeedKMH)
+    except Exception:
+        pass
 
     is_drifting = abs_angle > DRIFT_ANGLE_MIN
 
-    if is_drifting:
-        # Tire angle from steering wheel
-        tire_angle = steer / STEERING_RATIO
-
-        # Ideal counter-steer: front wheels should point roughly opposite to slip
-        ideal_tire_angle = -slip_angle
-        raw_signal = tire_angle - ideal_tire_angle
-
-        # Throttle cross-influence: heavy throttle means you need more counter-steer
-        # gas > 0.6 = pushing hard, nudge signal toward "need more steer"
-        # gas < 0.3 = light throttle, less counter-steer needed
-        throttle_cross = (gas - 0.5) * 6.0
-
-        signal_smooth = signal_smooth * 0.88 + (raw_signal + throttle_cross) * 0.12
-    else:
-        signal_smooth = signal_smooth * 0.88
-
-    draw_vertical_meter(is_drifting)
-
-
-def draw_vertical_meter(active):
-    """Vertical bar: black background, green target zone.
-    Top = too much counter-steer (will grip up / straighten)
-    Bottom = not enough counter-steer (will spin)
-    """
     s = scale
-    bar_x = 5 * s
-    bar_y = 22 * s
-    bar_w = (APP_WIDTH - 10) * s
-    bar_h = (APP_HEIGHT - 30) * s
-    center_y = bar_y + bar_h / 2.0
+    cx = APP_WIDTH / 2.0
+    cy = APP_HEIGHT / 2.0
+    wheel_r = 70.0 * s
+    band_w = 12.0 * s
 
-    # Black background
-    ac.glBegin(3)
-    ac.glColor4f(0.08, 0.08, 0.08, 1.0)
-    ac.glVertex2f(bar_x, bar_y)
-    ac.glVertex2f(bar_x + bar_w, bar_y)
-    ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
-    ac.glVertex2f(bar_x, bar_y + bar_h)
-    ac.glEnd()
+    # --- Draw wheel ring (always visible) ---
+    draw_arc(cx, cy, wheel_r, 0, 360, 48, 0.4, 0.4, 0.4, 0.6)
 
-    # Green target zone in center (30%)
-    zone_h = bar_h * 0.30
-    zone_top = center_y - zone_h / 2
-    zone_bot = center_y + zone_h / 2
-    ac.glBegin(3)
-    ac.glColor4f(0.1, 0.4, 0.1, 1.0)
-    ac.glVertex2f(bar_x, zone_top)
-    ac.glVertex2f(bar_x + bar_w, zone_top)
-    ac.glVertex2f(bar_x + bar_w, zone_bot)
-    ac.glVertex2f(bar_x, zone_bot)
-    ac.glEnd()
+    # Current steering position as wheel rotation
+    # steer is in degrees at the wheel, we show it directly as rotation
+    # Clamp display to +/- 180 for visual sanity
+    steer_display = max(-180.0, min(180.0, steer))
+    # On screen: 0 deg = right (3 o'clock), -90 = top (12 o'clock)
+    # We want top = straight, so offset by -90
+    # Positive steer = right turn = clockwise on screen
+    current_angle_deg = -90.0 + steer_display
 
-    # Zone border lines
-    ac.glBegin(0)
-    ac.glColor4f(0.3, 1.0, 0.3, 0.8)
-    ac.glVertex2f(bar_x, zone_top)
-    ac.glVertex2f(bar_x + bar_w, zone_top)
-    ac.glEnd()
-    ac.glBegin(0)
-    ac.glColor4f(0.3, 1.0, 0.3, 0.8)
-    ac.glVertex2f(bar_x, zone_bot)
-    ac.glVertex2f(bar_x + bar_w, zone_bot)
-    ac.glEnd()
+    # Draw current steer needle (white, bright)
+    draw_needle(cx, cy, wheel_r - band_w - 4 * s, wheel_r + 6 * s,
+                current_angle_deg, 1.0, 1.0, 1.0, 1.0, 3.0 * s)
 
-    if not active:
+    if not is_drifting:
         return
 
-    # Map signal to position — clamp to +/- 30 degrees of deficit
-    clamped = max(-30.0, min(30.0, signal_smooth))
-    normalized = clamped / 30.0
+    # --- Compute safe steering zone ---
+    # The ideal counter-steer angle at the wheels ≈ -slip_angle
+    # (slip positive = nose left of travel, need steer right = positive steer)
+    # But the "ideal" is a range, not a point.
 
-    # Smooth needle movement per frame
-    global prev_needle_pos
-    max_move = 0.03
-    delta = normalized - prev_needle_pos
-    if abs(delta) > max_move:
-        normalized = prev_needle_pos + max_move * (1.0 if delta > 0 else -1.0)
-    prev_needle_pos = normalized
+    # Base ideal: counter-steer matches slip angle
+    ideal_steer = -slip_angle * STEERING_RATIO  # back to steering wheel degrees
 
-    # UP = too much counter-steer, DOWN = not enough
-    needle_y = center_y - normalized * (bar_h / 2.0)
-    needle_h = 8 * s
-    needle_y = max(bar_y + needle_h + 2, min(bar_y + bar_h - needle_h - 2, needle_y))
+    # Zone width: how much margin around ideal
+    # Narrower at high speed and high throttle (less forgiving)
+    base_zone_width = 60.0  # degrees of steering wheel
+    speed_factor = max(0.4, 1.0 - (speed - 40.0) * 0.004)  # shrinks above 40km/h
+    throttle_factor = max(0.5, 1.0 - (gas - 0.3) * 0.5)    # shrinks above 30% gas
+    zone_width = base_zone_width * speed_factor * throttle_factor
 
-    # Needle color: green in zone, red outside
-    in_zone = abs(normalized) < 0.15
-    nr, ng, nb = (0.3, 1.0, 0.3) if in_zone else (1.0, 0.2, 0.2)
+    zone_inner_steer = ideal_steer - zone_width / 2.0  # tighten edge
+    zone_outer_steer = ideal_steer + zone_width / 2.0  # extend edge
 
-    # White outline
-    ac.glBegin(3)
-    ac.glColor4f(1.0, 1.0, 1.0, 1.0)
-    ac.glVertex2f(bar_x, needle_y - needle_h - 2)
-    ac.glVertex2f(bar_x + bar_w, needle_y - needle_h - 2)
-    ac.glVertex2f(bar_x + bar_w, needle_y + needle_h + 2)
-    ac.glVertex2f(bar_x, needle_y + needle_h + 2)
-    ac.glEnd()
+    # Convert to display angles
+    zone_inner_deg = -90.0 + max(-180.0, min(180.0, zone_inner_steer))
+    zone_outer_deg = -90.0 + max(-180.0, min(180.0, zone_outer_steer))
 
-    # Colored fill
-    ac.glBegin(3)
-    ac.glColor4f(nr, ng, nb, 1.0)
-    ac.glVertex2f(bar_x + 2, needle_y - needle_h)
-    ac.glVertex2f(bar_x + bar_w - 2, needle_y - needle_h)
-    ac.glVertex2f(bar_x + bar_w - 2, needle_y + needle_h)
-    ac.glVertex2f(bar_x + 2, needle_y + needle_h)
-    ac.glEnd()
+    # Make sure inner < outer for drawing
+    arc_start = min(zone_inner_deg, zone_outer_deg)
+    arc_end = max(zone_inner_deg, zone_outer_deg)
+
+    # Draw green safe zone arc band
+    draw_arc_filled(cx, cy, wheel_r - band_w, wheel_r,
+                    arc_start, arc_end, 24, 0.1, 0.6, 0.1, 0.5)
+
+    # Draw zone edges (brighter green lines)
+    draw_arc(cx, cy, wheel_r - band_w, arc_start, arc_start + 0.1, 1, 0.3, 1.0, 0.3, 0.8)
+    draw_needle(cx, cy, wheel_r - band_w - 2 * s, wheel_r + 2 * s,
+                arc_start, 0.3, 1.0, 0.3, 0.6, 2.0 * s)
+    draw_needle(cx, cy, wheel_r - band_w - 2 * s, wheel_r + 2 * s,
+                arc_end, 0.3, 1.0, 0.3, 0.6, 2.0 * s)
+
+    # Redraw current needle on top so it's always visible
+    draw_needle(cx, cy, wheel_r - band_w - 4 * s, wheel_r + 6 * s,
+                current_angle_deg, 1.0, 1.0, 1.0, 1.0, 3.0 * s)
