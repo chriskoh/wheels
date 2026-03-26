@@ -21,7 +21,7 @@ throttle_signal = 0.0
 prev_needle_pos = 0.0
 
 # Scale
-scale = 2.4
+scale = 1.8
 SCALE_STEP = 0.05
 SCALE_MIN = 0.3
 SCALE_MAX = 4.0
