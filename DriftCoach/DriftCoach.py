@@ -26,6 +26,7 @@ DRIFT_ANGLE_MIN = 5.0
 DRIFT_ANGLE_INITIATE = 10.0
 DRIFT_ANGLE_SPIN = 70.0
 YAW_SPIN_THRESHOLD = 3.0
+STEERING_RATIO = 14.0
 
 # Scale
 scale = 1.0
@@ -321,8 +322,16 @@ def onFormRender(deltaT):
     # Combined signal:
     # Positive = too much gas (angle growing fast, speed climbing)
     # Negative = not enough gas (angle shrinking, speed dropping)
-    # Speed gets heavy weight — losing speed during a drift is critical
-    throttle_signal = angle_rate_smooth + speed_rate_smooth * 6.0
+    base_signal = angle_rate_smooth + speed_rate_smooth * 6.0
+
+    # Steer cross-influence: under-countering means throttle is effectively "too much"
+    steer_cross = 0.0
+    if abs_angle > 10.0:
+        tire_angle = abs(steer) / STEERING_RATIO
+        steer_coverage = tire_angle / max(abs_angle, 1.0)
+        steer_cross = (1.0 - steer_coverage) * 3.0
+
+    throttle_signal = base_signal + steer_cross
 
     # Show signal value on the throttle label for debugging
     ac.setText(throttle_title_label, "THROTTLE")

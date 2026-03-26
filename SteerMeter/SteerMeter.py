@@ -90,8 +90,13 @@ def onFormRender(deltaT):
     abs_angle = abs(slip_angle)
 
     steer = 0.0
+    gas = 0.0
     try:
         steer = ac.getCarState(car, acsys.CS.Steer)
+    except Exception:
+        pass
+    try:
+        gas = ac.getCarState(car, acsys.CS.Gas)
     except Exception:
         pass
 
@@ -102,14 +107,15 @@ def onFormRender(deltaT):
         tire_angle = steer / STEERING_RATIO
 
         # Ideal counter-steer: front wheels should point roughly opposite to slip
-        # slip_angle > 0 means car nose is left of travel, need steer right (negative tire angle)
-        # We want tire_angle ≈ -slip_angle (counter-steer matches drift angle)
-        # deficit > 0 = need more counter-steer
-        # deficit < 0 = too much counter-steer (will straighten/grip up)
         ideal_tire_angle = -slip_angle
         raw_signal = tire_angle - ideal_tire_angle
 
-        signal_smooth = signal_smooth * 0.88 + raw_signal * 0.12
+        # Throttle cross-influence: heavy throttle means you need more counter-steer
+        # gas > 0.6 = pushing hard, nudge signal toward "need more steer"
+        # gas < 0.3 = light throttle, less counter-steer needed
+        throttle_cross = (gas - 0.5) * 6.0
+
+        signal_smooth = signal_smooth * 0.88 + (raw_signal + throttle_cross) * 0.12
     else:
         signal_smooth = signal_smooth * 0.88
 

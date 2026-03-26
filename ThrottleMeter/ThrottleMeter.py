@@ -11,6 +11,7 @@ APP_HEIGHT = 400
 
 # Drift detection
 DRIFT_ANGLE_MIN = 5.0
+STEERING_RATIO = 14.0
 
 # Smoothing
 prev_slip_angle = 0.0
@@ -99,8 +100,13 @@ def onFormRender(deltaT):
     abs_angle = abs(slip_angle)
 
     speed = 0.0
+    steer = 0.0
     try:
         speed = ac.getCarState(car, acsys.CS.SpeedKMH)
+    except Exception:
+        pass
+    try:
+        steer = ac.getCarState(car, acsys.CS.Steer)
     except Exception:
         pass
 
@@ -117,7 +123,19 @@ def onFormRender(deltaT):
     angle_rate_smooth = angle_rate_smooth * 0.92 + raw_angle_rate * 0.08
     speed_rate_smooth = speed_rate_smooth * 0.92 + raw_speed_rate * 0.08
 
-    throttle_signal = angle_rate_smooth + speed_rate_smooth * 6.0
+    # Base throttle signal
+    base_signal = angle_rate_smooth + speed_rate_smooth * 6.0
+
+    # Steer cross-influence: under-countering means throttle is effectively "too much"
+    steer_cross = 0.0
+    if abs_angle > 10.0:
+        tire_angle = abs(steer) / STEERING_RATIO
+        steer_coverage = tire_angle / max(abs_angle, 1.0)
+        # coverage < 1 = under-countering, nudge throttle signal positive (too much gas)
+        # coverage > 1 = over-countering, nudge throttle signal negative (can add gas)
+        steer_cross = (1.0 - steer_coverage) * 3.0
+
+    throttle_signal = base_signal + steer_cross
 
     is_drifting = abs_angle > DRIFT_ANGLE_MIN
 
