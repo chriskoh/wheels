@@ -26,6 +26,7 @@ DRIFT_ANGLE_MIN = 5.0
 DRIFT_ANGLE_INITIATE = 10.0
 DRIFT_ANGLE_SPIN = 70.0
 YAW_SPIN_THRESHOLD = 3.0
+STEERING_RATIO = 14.0
 
 # Scale
 scale = 1.0
@@ -43,8 +44,10 @@ was_drifting = False
 was_spinning = False
 prev_slip_angle = 0.0
 prev_speed = 0.0
+prev_yaw_rate = 0.0
 angle_rate_smooth = 0.0
 speed_rate_smooth = 0.0
+yaw_accel_smooth = 0.0
 throttle_signal = 0.0
 prev_needle_pos = 0.0
 
@@ -240,8 +243,8 @@ def onFormRender(deltaT):
     global stats_max_angle, stats_longest_drift, stats_current_drift_time
     global stats_spin_count, stats_drift_count
     global was_drifting, was_spinning
-    global prev_slip_angle, prev_speed
-    global angle_rate_smooth, speed_rate_smooth, throttle_signal
+    global prev_slip_angle, prev_speed, prev_yaw_rate
+    global angle_rate_smooth, speed_rate_smooth, yaw_accel_smooth, throttle_signal
 
     ac.setBackgroundOpacity(appWindow, 0.7)
 
@@ -309,20 +312,40 @@ def onFormRender(deltaT):
     if deltaT > 0:
         raw_angle_rate = (abs_angle - abs(prev_slip_angle)) / deltaT
         raw_speed_rate = (speed - prev_speed) / deltaT
+        raw_yaw_accel = (yaw_rate - prev_yaw_rate) / deltaT
     else:
         raw_angle_rate = 0.0
         raw_speed_rate = 0.0
+        raw_yaw_accel = 0.0
     prev_slip_angle = slip_angle
     prev_speed = speed
+    prev_yaw_rate = yaw_rate
 
     angle_rate_smooth = angle_rate_smooth * 0.92 + raw_angle_rate * 0.08
     speed_rate_smooth = speed_rate_smooth * 0.92 + raw_speed_rate * 0.08
+    yaw_accel_smooth = yaw_accel_smooth * 0.92 + raw_yaw_accel * 0.08
 
-    # Combined signal:
-    # Positive = too much gas (angle growing fast, speed climbing)
-    # Negative = not enough gas (angle shrinking, speed dropping)
-    # Speed gets heavy weight — losing speed during a drift is critical
-    throttle_signal = angle_rate_smooth + speed_rate_smooth * 6.0
+    # Combined signal with predictive components:
+    # Base: angle rate + speed rate (reactive — what just happened)
+    base_signal = angle_rate_smooth + speed_rate_smooth * 6.0
+
+    # Speed factor: more sensitive at higher speed (drift is harder to hold)
+    speed_factor = 1.0 + max(0.0, speed - 60.0) * 0.008
+
+    # Yaw acceleration: rotation speeding up = about to spin, slowing = stabilizing
+    # Positive yaw_accel when angle is positive = spinning out (bad, push signal up)
+    yaw_component = yaw_accel_smooth * 2.0
+
+    # Counter-steer deficit: if slip angle is big but counter-steer is small, trouble
+    abs_steer_wheel = abs(steer) / STEERING_RATIO if STEERING_RATIO else abs(steer)
+    if abs_angle > 10.0:
+        steer_coverage = abs_steer_wheel / max(abs_angle, 1.0)
+        # steer_coverage < 1.0 means under-countering — push signal toward danger
+        steer_deficit = max(0.0, 1.0 - steer_coverage) * 8.0
+    else:
+        steer_deficit = 0.0
+
+    throttle_signal = base_signal * speed_factor + yaw_component + steer_deficit
 
     # Show signal value on the throttle label for debugging
     ac.setText(throttle_title_label, "THROTTLE")
