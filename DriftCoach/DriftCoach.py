@@ -322,7 +322,7 @@ def onFormRender(deltaT):
     # Positive = too much gas (angle growing fast, speed climbing)
     # Negative = not enough gas (angle shrinking, speed dropping)
     # Speed gets heavy weight — losing speed during a drift is critical
-    throttle_signal = angle_rate_smooth + speed_rate_smooth * 4.0
+    throttle_signal = angle_rate_smooth + speed_rate_smooth * 6.0
 
     # Show signal value on the throttle label for debugging
     ac.setText(throttle_title_label, "THROTTLE")
@@ -364,9 +364,7 @@ def onFormRender(deltaT):
 
 
 def draw_throttle_meter(active):
-    """Draw a horizontal bar with 5 zones and a thick visible needle.
-    Left to right: dark red (dead) | cyan (tightening) | green (stable) | orange (extending) | dark red (spin)
-    """
+    """Horizontal bar: black background, green target zone, white needle."""
     s = scale
     bar_y = 250 * s
     bar_x = 10 * s
@@ -374,65 +372,38 @@ def draw_throttle_meter(active):
     bar_h = 30 * s
     center_x = bar_x + bar_w / 2.0
 
-    # Zone boundaries (fraction of half-width from center)
-    green_frac = 0.175
-    mid_frac = 0.50
-
-    green_hw = bar_w * green_frac
-    mid_hw = bar_w * mid_frac
-
-    # Red zone (far left — grip-up/dead)
+    # Black background
     ac.glBegin(3)
-    ac.glColor4f(0.6, 0.05, 0.05, 1.0)
+    ac.glColor4f(0.08, 0.08, 0.08, 1.0)
     ac.glVertex2f(bar_x, bar_y)
-    ac.glVertex2f(center_x - mid_hw, bar_y)
-    ac.glVertex2f(center_x - mid_hw, bar_y + bar_h)
+    ac.glVertex2f(bar_x + bar_w, bar_y)
+    ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
     ac.glVertex2f(bar_x, bar_y + bar_h)
     ac.glEnd()
 
-    # Cyan zone (left — tightening)
-    ac.glBegin(3)
-    ac.glColor4f(0.0, 0.3, 0.4, 1.0)
-    ac.glVertex2f(center_x - mid_hw, bar_y)
-    ac.glVertex2f(center_x - green_hw, bar_y)
-    ac.glVertex2f(center_x - green_hw, bar_y + bar_h)
-    ac.glVertex2f(center_x - mid_hw, bar_y + bar_h)
-    ac.glEnd()
-
-    # Green zone (center — stable)
+    # Green target zone in center (30%)
+    zone_w = bar_w * 0.30
+    zone_left = center_x - zone_w / 2
+    zone_right = center_x + zone_w / 2
     ac.glBegin(3)
     ac.glColor4f(0.1, 0.4, 0.1, 1.0)
-    ac.glVertex2f(center_x - green_hw, bar_y)
-    ac.glVertex2f(center_x + green_hw, bar_y)
-    ac.glVertex2f(center_x + green_hw, bar_y + bar_h)
-    ac.glVertex2f(center_x - green_hw, bar_y + bar_h)
-    ac.glEnd()
-
-    # Orange zone (right — extending)
-    ac.glBegin(3)
-    ac.glColor4f(0.5, 0.25, 0.0, 1.0)
-    ac.glVertex2f(center_x + green_hw, bar_y)
-    ac.glVertex2f(center_x + mid_hw, bar_y)
-    ac.glVertex2f(center_x + mid_hw, bar_y + bar_h)
-    ac.glVertex2f(center_x + green_hw, bar_y + bar_h)
-    ac.glEnd()
-
-    # Red zone (far right — spin/dead)
-    ac.glBegin(3)
-    ac.glColor4f(0.6, 0.05, 0.05, 1.0)
-    ac.glVertex2f(center_x + mid_hw, bar_y)
-    ac.glVertex2f(bar_x + bar_w, bar_y)
-    ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
-    ac.glVertex2f(center_x + mid_hw, bar_y + bar_h)
+    ac.glVertex2f(zone_left, bar_y)
+    ac.glVertex2f(zone_right, bar_y)
+    ac.glVertex2f(zone_right, bar_y + bar_h)
+    ac.glVertex2f(zone_left, bar_y + bar_h)
     ac.glEnd()
 
     # Zone border lines
-    for bx in [center_x - mid_hw, center_x - green_hw, center_x + green_hw, center_x + mid_hw]:
-        ac.glBegin(0)
-        ac.glColor4f(0.5, 0.5, 0.5, 0.4)
-        ac.glVertex2f(bx, bar_y)
-        ac.glVertex2f(bx, bar_y + bar_h)
-        ac.glEnd()
+    ac.glBegin(0)
+    ac.glColor4f(0.3, 1.0, 0.3, 0.8)
+    ac.glVertex2f(zone_left, bar_y)
+    ac.glVertex2f(zone_left, bar_y + bar_h)
+    ac.glEnd()
+    ac.glBegin(0)
+    ac.glColor4f(0.3, 1.0, 0.3, 0.8)
+    ac.glVertex2f(zone_right, bar_y)
+    ac.glVertex2f(zone_right, bar_y + bar_h)
+    ac.glEnd()
 
     if not active:
         return
@@ -441,7 +412,7 @@ def draw_throttle_meter(active):
     clamped = max(-80.0, min(80.0, throttle_signal))
     normalized = clamped / 80.0
 
-    # Smooth needle movement per frame to prevent jitter
+    # Smooth needle movement per frame
     global prev_needle_pos
     max_move = 0.03
     delta = normalized - prev_needle_pos
@@ -451,21 +422,14 @@ def draw_throttle_meter(active):
 
     needle_x = center_x + normalized * (bar_w / 2.0)
     needle_w = 14 * s
-
-    # Clamp needle to bar bounds
     needle_x = max(bar_x + needle_w + 2, min(bar_x + bar_w - needle_w - 2, needle_x))
 
-    # Needle color matches zone
-    abs_n = abs(normalized)
-    if abs_n < green_frac:
-        nr, ng, nb = 0.3, 1.0, 0.3       # green
-    elif abs_n < mid_frac:
-        if normalized < 0:
-            nr, ng, nb = 0.0, 0.8, 0.9    # cyan
-        else:
-            nr, ng, nb = 1.0, 0.6, 0.0    # orange
+    # Needle color: green in zone, red outside
+    in_zone = abs(normalized) < 0.15
+    if in_zone:
+        nr, ng, nb = 0.3, 1.0, 0.3
     else:
-        nr, ng, nb = 1.0, 0.1, 0.1        # red (danger, either side)
+        nr, ng, nb = 1.0, 0.2, 0.2
 
     # White outline
     ac.glBegin(3)

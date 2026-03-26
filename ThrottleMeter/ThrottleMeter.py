@@ -117,7 +117,7 @@ def onFormRender(deltaT):
     angle_rate_smooth = angle_rate_smooth * 0.92 + raw_angle_rate * 0.08
     speed_rate_smooth = speed_rate_smooth * 0.92 + raw_speed_rate * 0.08
 
-    throttle_signal = angle_rate_smooth + speed_rate_smooth * 4.0
+    throttle_signal = angle_rate_smooth + speed_rate_smooth * 6.0
 
     is_drifting = abs_angle > DRIFT_ANGLE_MIN
 
@@ -125,7 +125,7 @@ def onFormRender(deltaT):
 
 
 def draw_vertical_meter(active):
-    """Vertical bar with 5 zones. Top to bottom: red (spin) | orange (extending) | green (stable) | cyan (tightening) | blue (grip-up)"""
+    """Vertical bar: black background, green target zone, white needle."""
     s = scale
     bar_x = 5 * s
     bar_y = 22 * s
@@ -133,66 +133,38 @@ def draw_vertical_meter(active):
     bar_h = (APP_HEIGHT - 30) * s
     center_y = bar_y + bar_h / 2.0
 
-    # Zone boundaries (fraction of half-height from center)
-    # top: DARK RED (spin) | orange (extending) | GREEN (stable) | cyan (tightening) | DARK RED (dead) :bottom
-    green_frac = 0.175
-    mid_frac = 0.50
-
-    green_hh = bar_h * green_frac
-    mid_hh = bar_h * mid_frac
-
-    # Red zone (top — spin/dead)
+    # Black background
     ac.glBegin(3)
-    ac.glColor4f(0.6, 0.05, 0.05, 1.0)
+    ac.glColor4f(0.08, 0.08, 0.08, 1.0)
     ac.glVertex2f(bar_x, bar_y)
     ac.glVertex2f(bar_x + bar_w, bar_y)
-    ac.glVertex2f(bar_x + bar_w, center_y - mid_hh)
-    ac.glVertex2f(bar_x, center_y - mid_hh)
-    ac.glEnd()
-
-    # Orange zone (upper — extending)
-    ac.glBegin(3)
-    ac.glColor4f(0.5, 0.25, 0.0, 1.0)
-    ac.glVertex2f(bar_x, center_y - mid_hh)
-    ac.glVertex2f(bar_x + bar_w, center_y - mid_hh)
-    ac.glVertex2f(bar_x + bar_w, center_y - green_hh)
-    ac.glVertex2f(bar_x, center_y - green_hh)
-    ac.glEnd()
-
-    # Green zone (center — stable)
-    ac.glBegin(3)
-    ac.glColor4f(0.1, 0.4, 0.1, 1.0)
-    ac.glVertex2f(bar_x, center_y - green_hh)
-    ac.glVertex2f(bar_x + bar_w, center_y - green_hh)
-    ac.glVertex2f(bar_x + bar_w, center_y + green_hh)
-    ac.glVertex2f(bar_x, center_y + green_hh)
-    ac.glEnd()
-
-    # Cyan zone (lower — tightening)
-    ac.glBegin(3)
-    ac.glColor4f(0.0, 0.3, 0.4, 1.0)
-    ac.glVertex2f(bar_x, center_y + green_hh)
-    ac.glVertex2f(bar_x + bar_w, center_y + green_hh)
-    ac.glVertex2f(bar_x + bar_w, center_y + mid_hh)
-    ac.glVertex2f(bar_x, center_y + mid_hh)
-    ac.glEnd()
-
-    # Red zone (bottom — grip-up/dead)
-    ac.glBegin(3)
-    ac.glColor4f(0.6, 0.05, 0.05, 1.0)
-    ac.glVertex2f(bar_x, center_y + mid_hh)
-    ac.glVertex2f(bar_x + bar_w, center_y + mid_hh)
     ac.glVertex2f(bar_x + bar_w, bar_y + bar_h)
     ac.glVertex2f(bar_x, bar_y + bar_h)
     ac.glEnd()
 
+    # Green target zone in center (30%)
+    zone_h = bar_h * 0.30
+    zone_top = center_y - zone_h / 2
+    zone_bot = center_y + zone_h / 2
+    ac.glBegin(3)
+    ac.glColor4f(0.1, 0.4, 0.1, 1.0)
+    ac.glVertex2f(bar_x, zone_top)
+    ac.glVertex2f(bar_x + bar_w, zone_top)
+    ac.glVertex2f(bar_x + bar_w, zone_bot)
+    ac.glVertex2f(bar_x, zone_bot)
+    ac.glEnd()
+
     # Zone border lines
-    for by in [center_y - mid_hh, center_y - green_hh, center_y + green_hh, center_y + mid_hh]:
-        ac.glBegin(0)
-        ac.glColor4f(0.5, 0.5, 0.5, 0.4)
-        ac.glVertex2f(bar_x, by)
-        ac.glVertex2f(bar_x + bar_w, by)
-        ac.glEnd()
+    ac.glBegin(0)
+    ac.glColor4f(0.3, 1.0, 0.3, 0.8)
+    ac.glVertex2f(bar_x, zone_top)
+    ac.glVertex2f(bar_x + bar_w, zone_top)
+    ac.glEnd()
+    ac.glBegin(0)
+    ac.glColor4f(0.3, 1.0, 0.3, 0.8)
+    ac.glVertex2f(bar_x, zone_bot)
+    ac.glVertex2f(bar_x + bar_w, zone_bot)
+    ac.glEnd()
 
     if not active:
         return
@@ -201,7 +173,7 @@ def draw_vertical_meter(active):
     clamped = max(-160.0, min(160.0, throttle_signal))
     normalized = clamped / 160.0
 
-    # Smooth needle movement per frame to prevent jitter
+    # Smooth needle movement per frame
     global prev_needle_pos
     max_move = 0.03
     delta = normalized - prev_needle_pos
@@ -212,21 +184,14 @@ def draw_vertical_meter(active):
     # UP = too much, DOWN = not enough
     needle_y = center_y - normalized * (bar_h / 2.0)
     needle_h = 8 * s
-
-    # Clamp to bar
     needle_y = max(bar_y + needle_h + 2, min(bar_y + bar_h - needle_h - 2, needle_y))
 
-    # Needle color matches zone
-    abs_n = abs(normalized)
-    if abs_n < green_frac:
-        nr, ng, nb = 0.3, 1.0, 0.3       # green
-    elif abs_n < mid_frac:
-        if normalized > 0:
-            nr, ng, nb = 1.0, 0.6, 0.0    # orange (extending, up)
-        else:
-            nr, ng, nb = 0.0, 0.8, 0.9    # cyan (tightening, down)
+    # Needle color: green in zone, red outside
+    in_zone = abs(normalized) < 0.15
+    if in_zone:
+        nr, ng, nb = 0.3, 1.0, 0.3
     else:
-        nr, ng, nb = 1.0, 0.1, 0.1        # red (danger, either side)
+        nr, ng, nb = 1.0, 0.2, 0.2
 
     # White outline
     ac.glBegin(3)
